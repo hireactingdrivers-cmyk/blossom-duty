@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="ta">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blossom Driver Pro - Final</title>
+    <style>
+        :root { --primary: #004aad; --accent: #00c6ff; --success: #28a745; --danger: #dc3545; --bg: #f4f7f6; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding-bottom: 30px; }
+        .header { background: linear-gradient(135deg, var(--primary), var(--accent)); color: white; padding: 20px; text-align: center; font-weight: bold; font-size: 22px; border-radius: 0 0 20px 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .page { display: none; padding: 15px; animation: fadeIn 0.3s ease-in; }
+        .active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .card { background: white; padding: 18px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.08); margin-bottom: 15px; border-left: 6px solid var(--primary); position: relative; }
+        input, textarea { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 10px; box-sizing: border-box; font-size: 15px; }
+        .btn { width: 100%; padding: 14px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; transition: 0.2s; font-size: 15px; margin-top: 5px; }
+        .btn-blue { background: var(--primary); color: white; }
+        .btn-green { background: var(--success); color: white; }
+        .btn-red { background: var(--danger); color: white; margin-top: 10px; }
+        .btn-outline { border: 2px solid var(--primary); color: var(--primary); background: transparent; margin-top: 15px; }
+        .section-title { font-size: 18px; color: var(--primary); margin: 20px 0 10px 5px; font-weight: bold; border-bottom: 2px solid var(--accent); display: inline-block; }
+        .badge { padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: bold; float: right; }
+    </style>
+</head>
+<body>
+
+<div class="header">Blossom Acting Call Drivers</div>
+
+<!-- LOGIN -->
+<div id="loginPage" class="page active">
+    <div class="card" style="text-align: center; border-left: none;">
+        <h2>Driver Login</h2>
+        <input type="tel" id="login_m" placeholder="Mobile Number">
+        <button class="btn btn-blue" onclick="login()">LOGIN</button>
+        <p onclick="showPage('signupPage')" style="color:var(--primary); cursor:pointer; font-weight:bold; margin-top:20px;">New Driver? Signup</p>
+        <button class="btn btn-outline" style="font-size:12px;" onclick="showPage('adminAuth')">ADMIN LOGIN</button>
+    </div>
+</div>
+
+<!-- SIGNUP -->
+<div id="signupPage" class="page">
+    <div class="card">
+        <h2>Driver Signup</h2>
+        <input type="text" id="reg_n" placeholder="Full Name">
+        <input type="tel" id="reg_m" placeholder="Mobile Number">
+        <button class="btn btn-blue" onclick="signup()">SUBMIT</button>
+        <p onclick="showPage('loginPage')" style="text-align:center; cursor:pointer;">Back</p>
+    </div>
+</div>
+
+<!-- ADMIN -->
+<div id="adminAuth" class="page">
+    <div class="card">
+        <h3>Admin Password</h3>
+        <input type="password" id="admin_p" placeholder="Password">
+        <button class="btn btn-blue" onclick="if(document.getElementById('admin_p').value=='admin123') showPage('adminDash')">ENTER</button>
+    </div>
+</div>
+
+<div id="adminDash" class="page">
+    <div class="card">
+        <h3>Post New Duty</h3>
+        <input type="text" id="a_area" placeholder="Area">
+        <input type="datetime-local" id="a_dt">
+        <textarea id="a_desc" placeholder="Details"></textarea>
+        <button class="btn btn-blue" onclick="postDuty()">POST DUTY</button>
+    </div>
+    
+    <div class="section-title">🗑️ Manage All Duties</div>
+    <div id="adminAllDuties">Loading...</div>
+    
+    <div class="section-title">👨‍✈️ New Approvals</div>
+    <div id="pendingDrivers"></div>
+    
+    <button class="btn btn-outline" onclick="showPage('loginPage')">LOGOUT</button>
+</div>
+
+<!-- DRIVER -->
+<div id="driverDash" class="page">
+    <div class="card" style="background:var(--primary); color:white; border:none; text-align:center;">
+        <h3 id="driverName">Welcome</h3>
+    </div>
+    <div class="section-title">✅ Confirmed</div>
+    <div id="myDuties"></div>
+    <div class="section-title">🚗 Open Duties</div>
+    <div id="openDuties"></div>
+    <button class="btn btn-outline" onclick="showPage('loginPage')">LOGOUT</button>
+</div>
+
+<script>
+    const dbUrl = "https://blossomactingcalldrivers-77beb-default-rtdb.firebaseio.com";
+    let curM = ""; let curN = ""; let lastCount = 0;
+
+    function showPage(id) {
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        if(id === 'adminDash') loadAdminView();
+        if(id === 'driverDash') startMonitor();
+    }
+
+    // VOICE ALERT
+    function speak(txt) {
+        const m = new SpeechSynthesisUtterance(txt);
+        m.lang = 'en-US'; window.speechSynthesis.speak(m);
+    }
+
+    function startMonitor() {
+        loadOpen(); loadMy();
+        setInterval(() => { if(document.getElementById('driverDash').classList.contains('active')) loadOpen(); }, 10000);
+    }
+
+    // ADMIN FUNCTIONS
+    async function postDuty() {
+        const area = document.getElementById('a_area').value;
+        const dt = document.getElementById('a_dt').value;
+        if(!area || !dt) return alert("Fill details!");
+        const id = Date.now();
+        await fetch(`${dbUrl}/jobs/${id}.json`, { method:'PUT', body:JSON.stringify({id, area, dt, desc:document.getElementById('a_desc').value, status:"Open"}) });
+        alert("Posted!"); loadAdminView();
+    }
+
+    async function loadAdminView() {
+        // Load Duties
+        const res = await fetch(`${dbUrl}/jobs.json`);
+        const jobs = await res.json();
+        const list = document.getElementById('adminAllDuties'); list.innerHTML = "";
+        for(let k in jobs) {
+            const j = jobs[k];
+            let statusColor = j.status === 'Open' ? 'orange' : (j.status === 'Assigned' ? 'green' : 'grey');
+            list.innerHTML += `<div class="card" style="border-left-color:${statusColor}">
+                <b>📍 ${j.area}</b> [${j.status}]<br>
+                ${j.reqBy ? `Request: ${j.reqName}<br>` : ''}
+                ${j.status === 'Open' && j.reqBy ? `<button class="btn btn-green" onclick="assignJob('${j.id}','${j.reqBy}')">APPROVE</button>` : ''}
+                <button class="btn btn-red" onclick="deleteJob('${j.id}')">DELETE DUTY 🗑️</button>
+            </div>`;
+        }
+        // Load Drivers
+        const dRes = await fetch(`${dbUrl}/drivers.json`);
+        const drivers = await dRes.json();
+        const dList = document.getElementById('pendingDrivers'); dList.innerHTML = "";
+        for(let m in drivers) if(drivers[m].status === "Pending") dList.innerHTML += `<div class="card">${drivers[m].name} <button class="btn btn-blue" onclick="approveDriver('${m}')">APPROVE</button></div>`;
+    }
+
+    async function deleteJob(id) {
+        if(confirm("Intha duty-a permanent-ah delete pannalaama?")) {
+            await fetch(`${dbUrl}/jobs/${id}.json`, { method:'DELETE' });
+            alert("Deleted!"); loadAdminView();
+        }
+    }
+
+    async function assignJob(id, m) {
+        await fetch(`${dbUrl}/jobs/${id}.json`, { method:'PATCH', body:JSON.stringify({status:"Assigned", assignedTo:m}) });
+        loadAdminView();
+    }
+
+    async function approveDriver(m) {
+        await fetch(`${dbUrl}/drivers/${m}/status.json`, { method:'PUT', body:JSON.stringify("Approved") });
+        loadAdminView();
+    }
+
+    // DRIVER FUNCTIONS
+    async function loadOpen() {
+        const res = await fetch(`${dbUrl}/jobs.json`);
+        const jobs = await res.json();
+        const list = document.getElementById('openDuties'); 
+        let currentCount = 0; let html = "";
+        if(jobs) {
+            for(let k in jobs) {
+                if(jobs[k].status === "Open") {
+                    currentCount++;
+                    const isReq = jobs[k].reqBy === curM;
+                    html += `<div class="card"><b>📍 ${jobs[k].area}</b><br><button class="btn ${isReq?'':'btn-blue'}" ${isReq?'disabled':''} onclick="reqJob('${jobs[k].id}')">${isReq?'SENT ⏳':'REQUEST'}</button></div>`;
+                }
+            }
+        }
+        if(currentCount > lastCount) speak("New Duty Available");
+        lastCount = currentCount; list.innerHTML = html || "No duties.";
+    }
+
+    async function reqJob(id) {
+        await fetch(`${dbUrl}/jobs/${id}.json`, { method:'PATCH', body:JSON.stringify({reqBy:curM, reqName:curN}) });
+        loadOpen();
+    }
+
+    async function loadMy() {
+        const res = await fetch(`${dbUrl}/jobs.json`);
+        const jobs = await res.json();
+        const list = document.getElementById('myDuties'); list.innerHTML = "";
+        if(jobs) for(let k in jobs) if(jobs[k].status === "Assigned" && jobs[k].assignedTo === curM) list.innerHTML += `<div class="card" style="border-left-color:green"><b>📍 ${jobs[k].area}</b><button class="btn btn-green" onclick="finishJob('${jobs[k].id}')">COMPLETE ✅</button></div>`;
+    }
+
+    async function finishJob(id) {
+        await fetch(`${dbUrl}/jobs/${id}.json`, { method:'PATCH', body:JSON.stringify({status:"Finished"}) });
+        loadMy();
+    }
+
+    async function login() {
+        const m = document.getElementById('login_m').value;
+        const res = await fetch(`${dbUrl}/drivers/${m}.json`);
+        const data = await res.json();
+        if(data && data.status === "Approved") { curM = m; curN = data.name; document.getElementById('driverName').innerText = curN; showPage('driverDash'); }
+        else alert("Pending or Not Found!");
+    }
+
+    async function signup() {
+        const n = document.getElementById('reg_n').value; const m = document.getElementById('reg_m').value;
+        await fetch(`${dbUrl}/drivers/${m}.json`, { method:'PUT', body:JSON.stringify({name:n, mobile:m, status:"Pending"}) });
+        alert("Done!"); showPage('loginPage');
+    }
+</script>
+</body>
+</html>
