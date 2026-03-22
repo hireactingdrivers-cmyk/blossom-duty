@@ -4,8 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Blossom Driver Pro - Final</title>
+
+    <!-- 1. Full Screen Mode (No Browser Bar) kaga indha meta tags -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Blossom">
+    <meta name="theme-color" content="#004aad"> 
+
+    <!-- 2. Logo Configuration (Unga logo link-ah replace pannunga) -->
+    <link rel="icon" type="image/png" href="https://your-link.com/logo.png"> 
+    <link rel="apple-touch-icon" href="https://your-link.com/logo.png">
+
     <style>
         :root { --primary: #004aad; --accent: #00c6ff; --success: #28a745; --danger: #dc3545; --bg: #f4f7f6; }
+        /* ... baki CSS codes ... */
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding-bottom: 30px; }
         .header { background: linear-gradient(135deg, var(--primary), var(--accent)); color: white; padding: 20px; text-align: center; font-weight: bold; font-size: 22px; border-radius: 0 0 20px 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
         .page { display: none; padding: 15px; animation: fadeIn 0.3s ease-in; }
@@ -60,31 +73,61 @@
 <div id="adminDash" class="page">
     <div class="card">
         <h3>Post New Duty</h3>
-        <input type="text" id="a_area" placeholder="Area">
-        <input type="datetime-local" id="a_dt">
-        <textarea id="a_desc" placeholder="Details"></textarea>
+        <input type="text" id="a_area" placeholder="Area (e.g., T.Nagar)">
+        <input type="text" id="a_dt" placeholder="Date & Time (e.g., 22 Mar, 10:00 AM)">
+        <textarea id="a_desc" placeholder="Details (Optional)"></textarea>
         <button class="btn btn-blue" onclick="postDuty()">POST DUTY</button>
     </div>
     
-    <div class="section-title">🗑️ Manage All Duties</div>
-    <div id="adminAllDuties">Loading...</div>
+    <!-- New Toggle Button for All Duties -->
+    <button class="btn btn-outline" onclick="toggleAllDuties()">📋 VIEW ALL DUTIES</button>
+
+    <div id="allDutiesSection" style="display:none; margin-top:15px;">
+        <div class="section-title">🗑️ Manage All Duties</div>
+        <div id="adminAllDuties">Loading...</div>
+    </div>
     
     <div class="section-title">👨‍✈️ New Approvals</div>
     <div id="pendingDrivers"></div>
     
+    <button class="btn btn-outline" onclick="toggleDriverList()">👥 REGISTERED DRIVERS</button>
+
+    <div id="registeredDriversSection" style="display:none; margin-top:15px;">
+        <div class="section-title">🗂️ All Registered Drivers</div>
+        <div id="allDriversList">Loading...</div>
+    </div>
+
     <button class="btn btn-outline" onclick="showPage('loginPage')">LOGOUT</button>
 </div>
 
-<!-- DRIVER -->
+<!-- DRIVER DASHBOARD -->
 <div id="driverDash" class="page">
     <div class="card" style="background:var(--primary); color:white; border:none; text-align:center;">
         <h3 id="driverName">Welcome</h3>
     </div>
-    <div class="section-title">✅ Confirmed</div>
-    <div id="myDuties"></div>
+
+    <!-- ONGOING DUTIES BUTTON -->
+    <button class="btn btn-outline" onclick="toggleMyDuties()">📂 MY ONGOING DUTIES</button>
+
+    <div id="myDutiesSection" style="display:none; margin-top:15px;">
+        <div class="section-title">✅ Confirmed / Ongoing</div>
+        <div id="myDuties"></div>
+        
+        <hr style="border:0.5px solid #ddd; margin:20px 0;">
+        
+        <!-- NEW: HISTORY TOGGLE BUTTON -->
+        <button class="btn btn-outline" style="border-color:grey; color:grey; font-size:13px;" onclick="toggleHistory()">📜 VIEW COMPLETED HISTORY</button>
+        
+        <div id="historySection" style="display:none; margin-top:15px;">
+            <div class="section-title" style="color:grey; border-bottom-color:grey;">⌛ Completed History</div>
+            <div id="myHistory"></div>
+        </div>
+    </div>
+
     <div class="section-title">🚗 Open Duties</div>
     <div id="openDuties"></div>
-    <button class="btn btn-outline" onclick="showPage('loginPage')">LOGOUT</button>
+    
+    <button class="btn btn-outline" style="margin-top:30px;" onclick="showPage('loginPage')">LOGOUT</button>
 </div>
 
 <script>
@@ -105,35 +148,127 @@
     }
 
     function startMonitor() {
-        loadOpen(); loadMy();
-        setInterval(() => { if(document.getElementById('driverDash').classList.contains('active')) loadOpen(); }, 10000);
-    }
+    loadOpen(); 
+    loadMy(); // Dashboard open pannum podhey load aagum
+    setInterval(() => { 
+        if(document.getElementById('driverDash').classList.contains('active')) {
+            loadOpen();
+            loadMy(); // Every 10 seconds check pannum
+        }
+    }, 10000);
+}
 
     // ADMIN FUNCTIONS
     async function postDuty() {
-        const area = document.getElementById('a_area').value;
-        const dt = document.getElementById('a_dt').value;
-        if(!area || !dt) return alert("Fill details!");
-        const id = Date.now();
-        await fetch(`${dbUrl}/jobs/${id}.json`, { method:'PUT', body:JSON.stringify({id, area, dt, desc:document.getElementById('a_desc').value, status:"Open"}) });
-        alert("Posted!"); loadAdminView();
+    const area = document.getElementById('a_area').value;
+    const dt = document.getElementById('a_dt').value;
+    const desc = document.getElementById('a_desc').value;
+
+    if(!area || !dt) {
+        alert("Details fill pannunga boss!");
+        return;
     }
 
-    async function loadAdminView() {
-        // Load Duties
-        const res = await fetch(`${dbUrl}/jobs.json`);
-        const jobs = await res.json();
-        const list = document.getElementById('adminAllDuties'); list.innerHTML = "";
-        for(let k in jobs) {
-            const j = jobs[k];
-            let statusColor = j.status === 'Open' ? 'orange' : (j.status === 'Assigned' ? 'green' : 'grey');
-            list.innerHTML += `<div class="card" style="border-left-color:${statusColor}">
-                <b>📍 ${j.area}</b> [${j.status}]<br>
-                ${j.reqBy ? `Request: ${j.reqName}<br>` : ''}
-                ${j.status === 'Open' && j.reqBy ? `<button class="btn btn-green" onclick="assignJob('${j.id}','${j.reqBy}')">APPROVE</button>` : ''}
-                <button class="btn btn-red" onclick="deleteJob('${j.id}')">DELETE DUTY 🗑️</button>
-            </div>`;
+    const id = Date.now();
+    
+    // 1. Firebase Logic
+    try {
+        await fetch(`${dbUrl}/jobs/${id}.json`, { 
+            method:'PUT', 
+            body:JSON.stringify({
+                id, 
+                area, 
+                dt, 
+                desc: desc, 
+                status:"Open"
+            }) 
+        });
+    } catch(e) {
+        console.error("Firebase Error:", e);
+    }
+
+    // 2. Telegram Logic
+    const botToken = "8385530049:AAEe6TtUyK7lcjlgz0vzr8u3on61MY3AABo";
+    const chatId = "-1003800327361"; // Unga numerical ID (with -100)
+
+    const message = `🌸 *BLOSSOM ACTING DRIVERS* 🌸\n\n` +
+                    `📍 *Area:* ${area}\n` +
+                    `⏰ *Time:* ${dt}\n` +
+                    `📝 *Note:* ${desc || 'N/A'}\n\n` +
+                    `✅ *App-la Request pannunga!*`;
+
+    try {
+        const res = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                chat_id: chatId,
+                text: message,
+                parse_mode: 'Markdown'
+            })
+        });
+        
+        const data = await res.json();
+        if(data.ok) {
+            alert("Duty Posted to App & Telegram! 🚀");
+        } else {
+            alert("Telegram Error: " + data.description);
         }
+    } catch (e) {
+        console.error("Telegram error:", e);
+        alert("Network error. Duty posted to Firebase only.");
+    }
+
+    // Form clear
+    document.getElementById('a_area').value = "";
+    document.getElementById('a_dt').value = "";
+    document.getElementById('a_desc').value = "";
+    loadAdminView();
+}
+
+    async function loadAdminView() {
+    const res = await fetch(`${dbUrl}/jobs.json`);
+    const jobs = await res.json();
+    const list = document.getElementById('adminAllDuties'); 
+    list.innerHTML = "";
+
+    for(let k in jobs) {
+        const j = jobs[k];
+        let statusColor = j.status === 'Open' ? 'orange' : (j.status === 'Assigned' ? 'green' : 'grey');
+        
+        // Requests list create pannuradhu
+        let reqHtml = "";
+        if(j.requests) {
+            reqHtml = "<div style='background:#f9f9f9; padding:5px; border-radius:5px; margin-top:5px;'><b>Requested Drivers:</b><br>";
+            for(let m in j.requests) {
+                const r = j.requests[m];
+                reqHtml += `
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:5px; border-bottom:1px solid #ddd; padding-bottom:3px;">
+                        <span>${r.reqName} (${m})</span>
+                        ${j.status === 'Open' ? `<button class="btn btn-green" style="width:auto; padding:5px 10px; font-size:12px;" onclick="assignJob('${j.id}','${m}')">APPROVE</button>` : ''}
+                    </div>`;
+            }
+            reqHtml += "</div>";
+        }
+
+        list.innerHTML += `<div class="card" style="border-left-color:${statusColor}">
+    <div class="badge" style="background:${statusColor}; color:white;">${j.status}</div>
+    <b>📍 Area: ${j.area}</b><br>
+    <b>⏰ Time: ${j.dt}</b><br>
+    ${j.desc ? `📝 <i>${j.desc}</i><br>` : ''}
+    <hr>
+    <b>Status:</b> [${j.status}]<br>
+    
+    <!-- Assigned Driver details -->
+    ${j.assignedTo ? `✅ Assigned to: ${j.assignedTo}<br>` : reqHtml}
+    
+    <!-- Driver enter panna Amount inge varum -->
+    ${j.status === 'Finished' ? `<b style="color:var(--success); font-size:1.1em;">💰 Received: ₹${j.receivedAmount || 0}</b><br>` : ''}
+    
+    <button class="btn btn-red" onclick="deleteJob('${j.id}')">DELETE DUTY 🗑️</button>
+</div>`;
+    }
+
         // Load Drivers
         const dRes = await fetch(`${dbUrl}/drivers.json`);
         const drivers = await dRes.json();
@@ -147,11 +282,69 @@
             alert("Deleted!"); loadAdminView();
         }
     }
+    
+    async function toggleAllDuties() {
+    const section = document.getElementById('allDutiesSection');
+    
+    if (section.style.display === "none") {
+        section.style.display = "block";
+        loadAdminView(); // This refreshes the list when opened
+    } else {
+        section.style.display = "none";
+    }
+}
+
+    async function toggleDriverList() {
+    const section = document.getElementById('registeredDriversSection');
+    const list = document.getElementById('allDriversList');
+    
+    // Toggle Display
+    if (section.style.display === "none") {
+        section.style.display = "block";
+        list.innerHTML = "Fetching drivers...";
+        
+        try {
+            const res = await fetch(`${dbUrl}/drivers.json`);
+            const drivers = await res.json();
+            list.innerHTML = "";
+            
+            if (drivers) {
+                for (let m in drivers) {
+                    const d = drivers[m];
+                    const statusColor = d.status === "Approved" ? "var(--success)" : "var(--danger)";
+                    
+                    list.innerHTML += `
+                        <div class="card" style="border-left: 6px solid ${statusColor}; margin-bottom: 8px; padding: 10px;">
+                            <b>👤 Name:</b> ${d.name}<br>
+                            <b>📱 Mobile:</b> ${d.mobile}<br>
+                            <b>📌 Status:</b> <span style="color:${statusColor}; font-weight:bold;">${d.status}</span>
+                        </div>`;
+                }
+            } else {
+                list.innerHTML = "No drivers found.";
+            }
+        } catch (e) {
+            list.innerHTML = "Error loading drivers.";
+        }
+    } else {
+        section.style.display = "none";
+    }
+}
 
     async function assignJob(id, m) {
-        await fetch(`${dbUrl}/jobs/${id}.json`, { method:'PATCH', body:JSON.stringify({status:"Assigned", assignedTo:m}) });
+    if(confirm("Intha driver-ku duty assign pannalaama?")) {
+        await fetch(`${dbUrl}/jobs/${id}.json`, { 
+            method:'PATCH', 
+            body:JSON.stringify({
+                status: "Assigned", 
+                assignedTo: m,
+                requests: null // Duty confirm aana piragu requests list-a clear panrom
+            }) 
+        });
+        alert("Driver Assigned Successfully!");
         loadAdminView();
     }
+}
 
     async function approveDriver(m) {
         await fetch(`${dbUrl}/drivers/${m}/status.json`, { method:'PUT', body:JSON.stringify("Approved") });
@@ -162,14 +355,21 @@
     async function loadOpen() {
         const res = await fetch(`${dbUrl}/jobs.json`);
         const jobs = await res.json();
-        const list = document.getElementById('openDuties'); 
+        const list = document.getElementById('openDuties');
         let currentCount = 0; let html = "";
         if(jobs) {
             for(let k in jobs) {
                 if(jobs[k].status === "Open") {
                     currentCount++;
-                    const isReq = jobs[k].reqBy === curM;
-                    html += `<div class="card"><b>📍 ${jobs[k].area}</b><br><button class="btn ${isReq?'':'btn-blue'}" ${isReq?'disabled':''} onclick="reqJob('${jobs[k].id}')">${isReq?'SENT ⏳':'REQUEST'}</button></div>`;
+                    const isReq = jobs[k].requests && jobs[k].requests[curM];
+                    html += `<div class="card">
+    <b>📍 Area: ${jobs[k].area}</b><br>
+    <b>📅 Time: ${jobs[k].dt}</b><br>
+    <p style="font-size: 0.9em; color: #555;">${jobs[k].desc || ''}</p>
+    <button class="btn ${isReq?'':'btn-blue'}" ${isReq?'disabled':''} onclick="reqJob('${jobs[k].id}')">
+        ${isReq ? 'SENT ⏳' : 'REQUEST'}
+    </button>
+</div>`;
                 }
             }
         }
@@ -178,21 +378,141 @@
     }
 
     async function reqJob(id) {
-        await fetch(`${dbUrl}/jobs/${id}.json`, { method:'PATCH', body:JSON.stringify({reqBy:curM, reqName:curN}) });
-        loadOpen();
+    // 1. Check if the driver has any ONGOING duty
+    const res = await fetch(`${dbUrl}/jobs.json`);
+    const allJobs = await res.json();
+    
+    let hasOngoing = false;
+    if(allJobs) {
+        for(let k in allJobs) {
+            // "Assigned" status-la indha driver-ku yedhavadhu duty irukka-nu paakkurom
+            if(allJobs[k].status === "Assigned" && allJobs[k].assignedTo === curM) {
+                hasOngoing = true;
+                break;
+            }
+        }
     }
+
+    // 2. Alert and Stop if they are busy
+    if(hasOngoing) {
+        alert("⚠️ Boss, neenga ippo oru duty-la irukkeenga! Adha 'COMPLETE' pannittu pudhu duty-ku request kodunga.");
+        return; 
+    }
+
+    // 3. Busy illana mattum Request anuppum
+    await fetch(`${dbUrl}/jobs/${id}/requests/${curM}.json`, { 
+        method:'PUT', 
+        body:JSON.stringify({reqName:curN, reqMobile:curM}) 
+    });
+    
+    alert("Request Sent! Wait for Admin Approval. 👍");
+    loadOpen();
+}
 
     async function loadMy() {
-        const res = await fetch(`${dbUrl}/jobs.json`);
-        const jobs = await res.json();
-        const list = document.getElementById('myDuties'); list.innerHTML = "";
-        if(jobs) for(let k in jobs) if(jobs[k].status === "Assigned" && jobs[k].assignedTo === curM) list.innerHTML += `<div class="card" style="border-left-color:green"><b>📍 ${jobs[k].area}</b><button class="btn btn-green" onclick="finishJob('${jobs[k].id}')">COMPLETE ✅</button></div>`;
+    const res = await fetch(`${dbUrl}/jobs.json`);
+    const jobs = await res.json();
+    const list = document.getElementById('myDuties'); 
+    list.innerHTML = ""; // Pazhaya list-a clear panna
+    
+    if(jobs) {
+        for(let k in jobs) {
+            // Check: Job assign aagi irukanum + Indha specific driver-ku assign aagi irukanum
+            if(jobs[k].status === "Assigned" && jobs[k].assignedTo === curM) {
+                list.innerHTML += `
+                <div class="card" style="border-left: 6px solid var(--success);">
+                    <div class="badge" style="background:var(--success); color:white;">CONFIRMED ✅</div>
+                    <b>📍 Area: ${jobs[k].area}</b><br>
+                    <b>⏰ Time: ${jobs[k].dt}</b><br>
+                    <p style="font-size: 0.9em; color: #555;">${jobs[k].desc || ''}</p>
+                    <button class="btn btn-green" onclick="finishJob('${jobs[k].id}')">COMPLETE DUTY ✅</button>
+                </div>`;
+            }
+        }
     }
+    
+    if(list.innerHTML === "") {
+        list.innerHTML = "<p style='text-align:center; color:grey;'>No confirmed duties yet.</p>";
+    }
+}
+    async function toggleMyDuties() {
+    const section = document.getElementById('myDutiesSection');
+    if (section.style.display === "none") {
+        section.style.display = "block";
+        loadMy(); 
+    } else {
+        section.style.display = "none";
+    }
+}
+
+    async function loadMy() {
+    const res = await fetch(`${dbUrl}/jobs.json`);
+    const jobs = await res.json();
+    const currentList = document.getElementById('myDuties');
+    const historyList = document.getElementById('myHistory');
+    
+    currentList.innerHTML = ""; 
+    historyList.innerHTML = ""; 
+
+    if(jobs) {
+        for(let k in jobs) {
+            const j = jobs[k];
+            
+            // 1. Current Ongoing Duties
+            if(j.status === "Assigned" && j.assignedTo === curM) {
+                currentList.innerHTML += `
+                <div class="card" style="border-left-color: var(--success);">
+                    <div class="badge" style="background:var(--success); color:white;">ONGOING</div>
+                    <b>📍 Area: ${j.area}</b><br>
+                    <b>⏰ Time: ${j.dt}</b><br>
+                    <button class="btn btn-green" onclick="finishJob('${j.id}')">COMPLETE ✅</button>
+                </div>`;
+            }
+            
+            // 2. Completed History
+            else if(j.status === "Finished" && j.assignedTo === curM) {
+                historyList.innerHTML += `
+                <div class="card" style="border-left-color: grey; opacity: 0.8;">
+                    <div class="badge" style="background:grey; color:white;">FINISHED</div>
+                    <b>📍 Area: ${j.area}</b><br>
+                    <b>⏰ Time: ${j.dt}</b><br>
+                    <small>💰 Amount: ₹${j.receivedAmount || 0}</small>
+                </div>`;
+            }
+        }
+    }
+    
+    if(currentList.innerHTML === "") currentList.innerHTML = "<p style='padding:10px; color:grey;'>No ongoing duties.</p>";
+    if(historyList.innerHTML === "") historyList.innerHTML = "<p style='padding:10px; color:grey;'>No history found.</p>";
+}
 
     async function finishJob(id) {
-        await fetch(`${dbUrl}/jobs/${id}.json`, { method:'PATCH', body:JSON.stringify({status:"Finished"}) });
-        loadMy();
+    const amount = prompt("Enter Received Amount (Ex: 500):");
+    
+        // Amount enter pannaama cancel panna stop aagidum
+    if (amount === null || amount === "") {
+        alert("Please enter the amount to complete the duty!");
+        return;
     }
+
+    // Number-ah check panrom
+    if (isNaN(amount)) {
+        alert("Please enter a valid number!");
+        return;
+    }
+
+    await fetch(`${dbUrl}/jobs/${id}.json`, { 
+        method:'PATCH', 
+        body:JSON.stringify({
+            status: "Finished",
+            receivedAmount: amount, // Inga amount store aagum
+            finishedAt: new Date().toLocaleString() // Time-um record aagum
+        }) 
+    });
+    
+    alert("Duty Finished! Amount Updated. ✅");
+    loadMy();
+}
 
     async function login() {
         const m = document.getElementById('login_m').value;
