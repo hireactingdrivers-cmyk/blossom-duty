@@ -56,6 +56,9 @@
         <h2>Driver Signup</h2>
         <input type="text" id="reg_n" placeholder="Full Name">
         <input type="tel" id="reg_m" placeholder="Mobile Number">
+        <!-- New Input for Photo Link -->
+        <input type="text" id="reg_img" placeholder="Profile Photo Link (Ex: i.ibb.co/...)">
+        
         <button class="btn btn-blue" onclick="signup()">SUBMIT</button>
         <p onclick="showPage('loginPage')" style="text-align:center; cursor:pointer;">Back</p>
     </div>
@@ -66,7 +69,7 @@
     <div class="card">
         <h3>Admin Password</h3>
         <input type="password" id="admin_p" placeholder="Password">
-        <button class="btn btn-blue" onclick="if(document.getElementById('admin_p').value=='admin123') showPage('adminDash')">ENTER</button>
+        <button class="btn btn-blue" onclick="if(document.getElementById('admin_p').value=='divya') showPage('adminDash')">ENTER</button>
     </div>
 </div>
 
@@ -409,32 +412,16 @@
     loadOpen();
 }
 
-    async function loadMy() {
-    const res = await fetch(`${dbUrl}/jobs.json`);
-    const jobs = await res.json();
-    const list = document.getElementById('myDuties'); 
-    list.innerHTML = ""; // Pazhaya list-a clear panna
-    
-    if(jobs) {
-        for(let k in jobs) {
-            // Check: Job assign aagi irukanum + Indha specific driver-ku assign aagi irukanum
-            if(jobs[k].status === "Assigned" && jobs[k].assignedTo === curM) {
-                list.innerHTML += `
-                <div class="card" style="border-left: 6px solid var(--success);">
-                    <div class="badge" style="background:var(--success); color:white;">CONFIRMED ✅</div>
-                    <b>📍 Area: ${jobs[k].area}</b><br>
-                    <b>⏰ Time: ${jobs[k].dt}</b><br>
-                    <p style="font-size: 0.9em; color: #555;">${jobs[k].desc || ''}</p>
-                    <button class="btn btn-green" onclick="finishJob('${jobs[k].id}')">COMPLETE DUTY ✅</button>
-                </div>`;
-            }
-        }
-    }
-    
-    if(list.innerHTML === "") {
-        list.innerHTML = "<p style='text-align:center; color:grey;'>No confirmed duties yet.</p>";
+    function toggleHistory() {
+    const section = document.getElementById('historySection');
+    if (section.style.display === "none") {
+        section.style.display = "block";
+        loadMy(); // Data refresh panna idhu help pannum
+    } else {
+        section.style.display = "none";
     }
 }
+
     async function toggleMyDuties() {
     const section = document.getElementById('myDutiesSection');
     if (section.style.display === "none") {
@@ -489,7 +476,7 @@
     async function finishJob(id) {
     const amount = prompt("Enter Received Amount (Ex: 500):");
     
-        // Amount enter pannaama cancel panna stop aagidum
+                // Amount enter pannaama cancel panna stop aagidum
     if (amount === null || amount === "") {
         alert("Please enter the amount to complete the duty!");
         return;
@@ -514,19 +501,69 @@
     loadMy();
 }
 
-    async function login() {
-        const m = document.getElementById('login_m').value;
-        const res = await fetch(`${dbUrl}/drivers/${m}.json`);
-        const data = await res.json();
-        if(data && data.status === "Approved") { curM = m; curN = data.name; document.getElementById('driverName').innerText = curN; showPage('driverDash'); }
-        else alert("Pending or Not Found!");
+        async function login() {
+    const m = document.getElementById('login_m').value;
+    
+    if(!m) return alert("Mobile number enter pannunga!");
+
+    const res = await fetch(`${dbUrl}/drivers/${m}.json`);
+    const data = await res.json();
+    
+    if(data && data.status === "Approved") { 
+        curM = m; 
+        curN = data.name; 
+        
+        // --- PROFILE PHOTO & NAME DISPLAY ---
+        // Inga data.photo field-la irukura link use aagum
+        document.getElementById('driverName').innerHTML = `
+            <div style="margin-bottom: 15px;">
+                <img src="${data.photo || 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png'}" 
+                     style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 3px solid white; box-shadow: 0 4px 8px rgba(0,0,0,0.2);">
+            </div>
+            <span style="font-size: 18px; letter-spacing: 1px;">Welcome, ${curN}</span>
+        `; 
+        
+        showPage('driverDash'); 
     }
+    else if(data && data.status === "Pending") {
+        alert("⚠️ Unga account innum Approve aagala. Admin-kitta pesunga!");
+    }
+    else {
+        alert("❌ Driver record found illai. Signup pannunga!");
+    }
+}
 
     async function signup() {
-        const n = document.getElementById('reg_n').value; const m = document.getElementById('reg_m').value;
-        await fetch(`${dbUrl}/drivers/${m}.json`, { method:'PUT', body:JSON.stringify({name:n, mobile:m, status:"Pending"}) });
-        alert("Done!"); showPage('loginPage');
+    const n = document.getElementById('reg_n').value; 
+    const m = document.getElementById('reg_m').value;
+    const img = document.getElementById('reg_img').value;
+
+    if(!n || !m) {
+        alert("Name and Mobile Number fill pannunga!");
+        return;
     }
+
+    // .trim() use panna space-ah remove pannidum. Link illana mattum default photo varum.
+    const profilePic = (img && img.trim() !== "") ? img.trim() : "https://cdn-icons-png.flaticon.com/512/3135/3135715.png";
+
+    await fetch(`${dbUrl}/drivers/${m}.json`, { 
+        method:'PUT', 
+        body:JSON.stringify({
+            name: n, 
+            mobile: m, 
+            photo: profilePic, // Database-la "photo" nu dhaan store aagum
+            status: "Pending"
+        }) 
+    });
+
+    alert("Signup Success! Admin approval-ku wait pannunga. 👍");
+    
+    document.getElementById('reg_n').value = "";
+    document.getElementById('reg_m').value = "";
+    document.getElementById('reg_img').value = "";
+    
+    showPage('loginPage');
+}
 </script>
 </body>
 </html>
