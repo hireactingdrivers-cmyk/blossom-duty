@@ -470,7 +470,6 @@
     let hasOngoing = false;
     if(allJobs) {
         for(let k in allJobs) {
-            // "Assigned" status-la indha driver-ku yedhavadhu duty irukka-nu paakkurom
             if(allJobs[k].status === "Assigned" && allJobs[k].assignedTo === curM) {
                 hasOngoing = true;
                 break;
@@ -484,13 +483,41 @@
         return; 
     }
 
-    // 3. Busy illana mattum Request anuppum
+    // 3. Busy illana Job data-va notification-kaaga fetch panrom
+    const jobData = allJobs[id];
+
+    // 4. Request-ah Firebase-la update panrom
     await fetch(`${dbUrl}/jobs/${id}/requests/${curM}.json`, { 
         method:'PUT', 
         body:JSON.stringify({reqName:curN, reqMobile:curM}) 
     });
+
+    // 5. 🔥 Private Telegram Notification to YOU (Admin)
+    const botToken = "8385530049:AAEe6TtUyK7lcjlgz0vzr8u3on61MY3AABo";
+    const myPersonalId = "5052552560"; 
+
+    const telegramMsg = `🔔 *NEW DUTY REQUEST* 🔔\n\n` +
+                        `👤 *Driver:* ${curN}\n` +
+                        `📱 *Mobile:* ${curM}\n` +
+                        `📍 *Area:* ${jobData.area}\n` +
+                        `⏰ *Time:* ${jobData.dt}\n\n` +
+                        `👉 *Admin, App-la check panni approve pannunga!*`;
+
+    try {
+        await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                chat_id: myPersonalId,
+                text: telegramMsg,
+                parse_mode: 'Markdown'
+            })
+        });
+    } catch (e) {
+        console.error("Telegram error:", e);
+    }
     
-    alert("Request Sent! Wait for Admin Approval. 👍");
+    alert("Request Sent! Admin-ku notification anuppiyaachu. 👍");
     loadOpen();
 }
 
