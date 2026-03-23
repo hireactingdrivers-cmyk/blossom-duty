@@ -56,9 +56,11 @@
         <h2>Driver Signup</h2>
         <input type="text" id="reg_n" placeholder="Full Name">
         <input type="tel" id="reg_m" placeholder="Mobile Number">
-        <!-- New Input for Photo Link -->
-        <input type="text" id="reg_img" placeholder="Profile Photo Link (Ex: i.ibb.co/...)">
         
+        <label style="font-size: 13px; color: grey; margin-left: 5px;">License Expiry Date:</label>
+        <input type="date" id="reg_exp"> 
+        
+        <input type="text" id="reg_img" placeholder="Profile Photo Link">
         <button class="btn btn-blue" onclick="signup()">SUBMIT</button>
         <p onclick="showPage('loginPage')" style="text-align:center; cursor:pointer;">Back</p>
     </div>
@@ -230,8 +232,12 @@
 }
 
     async function loadAdminView() {
+    // 1. Fetch Jobs and Drivers Data
     const res = await fetch(`${dbUrl}/jobs.json`);
     const jobs = await res.json();
+    const dRes = await fetch(`${dbUrl}/drivers.json`);
+    const allDrivers = await dRes.json();
+    
     const list = document.getElementById('adminAllDuties'); 
     list.innerHTML = "";
 
@@ -239,15 +245,31 @@
         const j = jobs[k];
         let statusColor = j.status === 'Open' ? 'orange' : (j.status === 'Assigned' ? 'green' : 'grey');
         
-        // Requests list create pannuradhu
         let reqHtml = "";
         if(j.requests) {
-            reqHtml = "<div style='background:#f9f9f9; padding:5px; border-radius:5px; margin-top:5px;'><b>Requested Drivers:</b><br>";
+            reqHtml = "<div style='background:#f9f9f9; padding:10px; border-radius:10px; margin-top:5px; border:1px solid #ddd;'><b>Requested Drivers:</b><br>";
             for(let m in j.requests) {
                 const r = j.requests[m];
+                
+                // Driver profile-la irundhu Expiry Date edukkurom
+                const driverInfo = allDrivers[m];
+                const expDate = driverInfo ? driverInfo.licenseExp : 'N/A';
+                
+                // Expiry Check (Red Alert)
+                let expAlert = "";
+                if(driverInfo && driverInfo.licenseExp) {
+                    if(new Date(driverInfo.licenseExp) < new Date()) {
+                        expAlert = " <span style='color:red; font-weight:bold;'>[EXPIRED! ⚠️]</span>";
+                    }
+                }
+
                 reqHtml += `
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:5px; border-bottom:1px solid #ddd; padding-bottom:3px;">
-                        <span>${r.reqName} (${m})</span>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px; border-bottom:1px solid #eee; padding-bottom:5px;">
+                        <span style="font-size:14px;">
+                            👤 <b>${r.reqName}</b><br>
+                            📱 ${m}<br>
+                            📅 Exp: ${expDate}${expAlert}
+                        </span>
                         ${j.status === 'Open' ? `<button class="btn btn-green" style="width:auto; padding:5px 10px; font-size:12px;" onclick="assignJob('${j.id}','${m}')">APPROVE</button>` : ''}
                     </div>`;
             }
@@ -255,29 +277,35 @@
         }
 
         list.innerHTML += `<div class="card" style="border-left-color:${statusColor}">
-    <div class="badge" style="background:${statusColor}; color:white;">${j.status}</div>
-    <b>📍 Area: ${j.area}</b><br>
-    <b>⏰ Time: ${j.dt}</b><br>
-    ${j.desc ? `📝 <i>${j.desc}</i><br>` : ''}
-    <hr>
-    <b>Status:</b> [${j.status}]<br>
-    
-    <!-- Assigned Driver details -->
-    ${j.assignedTo ? `✅ Assigned to: ${j.assignedTo}<br>` : reqHtml}
-    
-    <!-- Driver enter panna Amount inge varum -->
-    ${j.status === 'Finished' ? `<b style="color:var(--success); font-size:1.1em;">💰 Received: ₹${j.receivedAmount || 0}</b><br>` : ''}
-    
-    <button class="btn btn-red" onclick="deleteJob('${j.id}')">DELETE DUTY 🗑️</button>
-</div>`;
+            <div class="badge" style="background:${statusColor}; color:white;">${j.status}</div>
+            <b>📍 Area: ${j.area}</b><br>
+            <b>⏰ Time: ${j.dt}</b><br>
+            ${j.desc ? `📝 <i>${j.desc}</i><br>` : ''}
+            <hr>
+            <b>Status:</b> [${j.status}]<br>
+            
+            ${j.assignedTo ? `✅ Assigned to: ${allDrivers[j.assignedTo] ? allDrivers[j.assignedTo].name : j.assignedTo}<br>` : reqHtml}
+            
+            ${j.status === 'Finished' ? `<b style="color:var(--success); font-size:1.1em;">💰 Received: ₹${j.receivedAmount || 0}</b><br>` : ''}
+            
+            <button class="btn btn-red" onclick="deleteJob('${j.id}')">DELETE DUTY 🗑️</button>
+        </div>`;
     }
 
-        // Load Drivers
-        const dRes = await fetch(`${dbUrl}/drivers.json`);
-        const drivers = await dRes.json();
-        const dList = document.getElementById('pendingDrivers'); dList.innerHTML = "";
-        for(let m in drivers) if(drivers[m].status === "Pending") dList.innerHTML += `<div class="card">${drivers[m].name} <button class="btn btn-blue" onclick="approveDriver('${m}')">APPROVE</button></div>`;
+    // Pending Driver Signup Approvals
+    const dList = document.getElementById('pendingDrivers'); 
+    dList.innerHTML = "";
+    for(let m in allDrivers) {
+        if(allDrivers[m].status === "Pending") {
+            dList.innerHTML += `
+                <div class="card">
+                    <b>${allDrivers[m].name}</b><br>
+                    Exp: ${allDrivers[m].licenseExp || 'N/A'}
+                    <button class="btn btn-blue" onclick="approveDriver('${m}')">APPROVE DRIVER</button>
+                </div>`;
+        }
     }
+}
 
     async function deleteJob(id) {
         if(confirm("Intha duty-a permanent-ah delete pannalaama?")) {
@@ -316,10 +344,26 @@
                     const d = drivers[m];
                     const statusColor = d.status === "Approved" ? "var(--success)" : "var(--danger)";
                     
+                    // --- License Expiry Logic ---
+                    let expDate = d.licenseExp || 'N/A';
+                    let expStyle = "color: #555;"; // Default grey color
+                    
+                    if(d.licenseExp) {
+                        const today = new Date();
+                        const expiry = new Date(d.licenseExp);
+                        
+                        // Check if expired
+                        if(expiry < today) {
+                            expStyle = "color: var(--danger); font-weight: bold;"; // Red color
+                            expDate += " (EXPIRED! ⚠️)";
+                        }
+                    }
+
                     list.innerHTML += `
                         <div class="card" style="border-left: 6px solid ${statusColor}; margin-bottom: 8px; padding: 10px;">
                             <b>👤 Name:</b> ${d.name}<br>
                             <b>📱 Mobile:</b> ${d.mobile}<br>
+                            <b>📅 License Exp:</b> <span style="${expStyle}">${expDate}</span><br>
                             <b>📌 Status:</b> <span style="color:${statusColor}; font-weight:bold;">${d.status}</span>
                         </div>`;
                 }
@@ -327,6 +371,7 @@
                 list.innerHTML = "No drivers found.";
             }
         } catch (e) {
+            console.error(e);
             list.innerHTML = "Error loading drivers.";
         }
     } else {
@@ -336,15 +381,52 @@
 
     async function assignJob(id, m) {
     if(confirm("Intha driver-ku duty assign pannalaama?")) {
+        // 1. Driver and Job Details Fetching
+        const dRes = await fetch(`${dbUrl}/drivers/${m}.json`);
+        const dData = await dRes.json();
+        const driverName = dData.name;
+
+        const jRes = await fetch(`${dbUrl}/jobs/${id}.json`);
+        const jData = await jRes.json();
+
+        // 2. Firebase Update
         await fetch(`${dbUrl}/jobs/${id}.json`, { 
             method:'PATCH', 
             body:JSON.stringify({
                 status: "Assigned", 
                 assignedTo: m,
-                requests: null // Duty confirm aana piragu requests list-a clear panrom
+                requests: null 
             }) 
         });
-        alert("Driver Assigned Successfully!");
+
+        // 3. Telegram Notification with WhatsApp Link
+        const botToken = "8385530049:AAEe6TtUyK7lcjlgz0vzr8u3on61MY3AABo";
+        const chatId = "-1003800327361";
+        
+        // Unga number 91 munnadi sethu link create panrom
+        const whatsappLink = "https://wa.me/919500005402";
+
+        const message = `✅ *DUTY ARRANGED* ✅\n\n` +
+                        `📍 *Area:* ${jData.area}\n` +
+                        `⏰ *Time:* ${jData.dt}\n` +
+                        `👨‍✈️ *Driver:* ${driverName}\n\n` +
+                        `📲 *Contact Admin:* ${whatsappLink}`;
+
+        try {
+            await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    chat_id: chatId,
+                    text: message,
+                    parse_mode: 'Markdown'
+                })
+            });
+        } catch (e) {
+            console.error("Telegram error:", e);
+        }
+
+        alert("Driver Assigned & Telegram Update Sent! 🚀");
         loadAdminView();
     }
 }
@@ -536,14 +618,14 @@
     async function signup() {
     const n = document.getElementById('reg_n').value; 
     const m = document.getElementById('reg_m').value;
+    const exp = document.getElementById('reg_exp').value; // New Date
     const img = document.getElementById('reg_img').value;
 
-    if(!n || !m) {
-        alert("Name and Mobile Number fill pannunga!");
+    if(!n || !m || !exp) {
+        alert("Name, Mobile, and License Expiry Date fill pannunga!");
         return;
     }
 
-    // .trim() use panna space-ah remove pannidum. Link illana mattum default photo varum.
     const profilePic = (img && img.trim() !== "") ? img.trim() : "https://cdn-icons-png.flaticon.com/512/3135/3135715.png";
 
     await fetch(`${dbUrl}/drivers/${m}.json`, { 
@@ -551,17 +633,13 @@
         body:JSON.stringify({
             name: n, 
             mobile: m, 
-            photo: profilePic, // Database-la "photo" nu dhaan store aagum
+            licenseExp: exp, // Database-la save aagum
+            photo: profilePic,
             status: "Pending"
         }) 
     });
 
-    alert("Signup Success! Admin approval-ku wait pannunga. 👍");
-    
-    document.getElementById('reg_n').value = "";
-    document.getElementById('reg_m').value = "";
-    document.getElementById('reg_img').value = "";
-    
+    alert("Signup Success! Admin approval-ku wait pannunga.");
     showPage('loginPage');
 }
 </script>
