@@ -381,10 +381,11 @@
 
     async function assignJob(id, m) {
     if(confirm("Intha driver-ku duty assign pannalaama?")) {
-        // 1. Driver and Job Details Fetching
+        // 1. Details Fetching
         const dRes = await fetch(`${dbUrl}/drivers/${m}.json`);
         const dData = await dRes.json();
         const driverName = dData.name;
+        const driverMobile = m; 
 
         const jRes = await fetch(`${dbUrl}/jobs/${id}.json`);
         const jData = await jRes.json();
@@ -399,34 +400,38 @@
             }) 
         });
 
-        // 3. Telegram Notification with WhatsApp Link
+        // 3. Telegram Notification (Back-end logic)
         const botToken = "8385530049:AAEe6TtUyK7lcjlgz0vzr8u3on61MY3AABo";
         const chatId = "-1003800327361";
-        
-        // Unga number 91 munnadi sethu link create panrom
-        const whatsappLink = "https://wa.me/919500005402";
-
-        const message = `✅ *DUTY ARRANGED* ✅\n\n` +
-                        `📍 *Area:* ${jData.area}\n` +
-                        `⏰ *Time:* ${jData.dt}\n` +
-                        `👨‍✈️ *Driver:* ${driverName}\n\n` +
-                        `📲 *Contact Admin:* ${whatsappLink}`;
+        const telegramMsg = `✅ *DUTY ARRANGED* ✅\n\n📍 *Area:* ${jData.area}\n⏰ *Time:* ${jData.dt}\n👨‍✈️ *Driver:* ${driverName}`;
 
         try {
-            await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+            fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    chat_id: chatId,
-                    text: message,
-                    parse_mode: 'Markdown'
-                })
+                body: JSON.stringify({ chat_id: chatId, text: telegramMsg, parse_mode: 'Markdown' })
             });
-        } catch (e) {
-            console.error("Telegram error:", e);
+        } catch (e) { console.error(e); }
+
+        // 4. WhatsApp Link Setup
+        const waMsg = encodeURIComponent(
+            `🌸 *BLOSSOM DRIVERS ALERT* 🌸\n\n` +
+            `✅ Duty Confirmed!\n` +
+            `📍 Area: ${jData.area}\n` +
+            `⏰ Time: ${jData.dt}\n\n` +
+            `payanam inidhe amaiya vaazhthukkal ! 👍`
+        );
+        const waLink = `https://wa.me/91${driverMobile}?text=${waMsg}`;
+
+        // 5. Success Message with Link (Popup Blocker-ah bypass panna idhu best!)
+        alert("Driver Assigned Successfully! 🚀");
+        
+        // Manual trigger for safety
+        const askWA = confirm("Driver-ku WhatsApp Alert anuppalaama?");
+        if(askWA) {
+            window.location.href = waLink; // Current window-leyae open aagum, so no block!
         }
 
-        alert("Driver Assigned & Telegram Update Sent! 🚀");
         loadAdminView();
     }
 }
