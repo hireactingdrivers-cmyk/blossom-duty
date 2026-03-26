@@ -232,7 +232,6 @@
 }
 
     async function loadAdminView() {
-    // 1. Fetch Jobs and Drivers Data
     const res = await fetch(`${dbUrl}/jobs.json`);
     const jobs = await res.json();
     const dRes = await fetch(`${dbUrl}/drivers.json`);
@@ -247,30 +246,17 @@
         
         let reqHtml = "";
         if(j.requests) {
-            reqHtml = "<div style='background:#f9f9f9; padding:10px; border-radius:10px; margin-top:5px; border:1px solid #ddd;'><b>Requested Drivers:</b><br>";
+            reqHtml = "<div style='background:#f9f9f9; padding:10px; border-radius:10px; margin-top:5px; border:1px solid #ddd;'><b>Requests:</b><br>";
             for(let m in j.requests) {
                 const r = j.requests[m];
-                
-                // Driver profile-la irundhu Expiry Date edukkurom
                 const driverInfo = allDrivers[m];
                 const expDate = driverInfo ? driverInfo.licenseExp : 'N/A';
-                
-                // Expiry Check (Red Alert)
-                let expAlert = "";
-                if(driverInfo && driverInfo.licenseExp) {
-                    if(new Date(driverInfo.licenseExp) < new Date()) {
-                        expAlert = " <span style='color:red; font-weight:bold;'>[EXPIRED! ⚠️]</span>";
-                    }
-                }
+                let expAlert = (driverInfo && new Date(driverInfo.licenseExp) < new Date()) ? " <span style='color:red;'>[EXPIRED!]</span>" : "";
 
                 reqHtml += `
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px; border-bottom:1px solid #eee; padding-bottom:5px;">
-                        <span style="font-size:14px;">
-                            👤 <b>${r.reqName}</b><br>
-                            📱 ${m}<br>
-                            📅 Exp: ${expDate}${expAlert}
-                        </span>
-                        ${j.status === 'Open' ? `<button class="btn btn-green" style="width:auto; padding:5px 10px; font-size:12px;" onclick="assignJob('${j.id}','${m}')">APPROVE</button>` : ''}
+                        <span style="font-size:13px;">👤 <b>${r.reqName}</b> | ${m}<br>📅 Exp: ${expDate}${expAlert}</span>
+                        ${j.status === 'Open' ? `<button class="btn btn-green" style="width:auto; padding:4px 8px; font-size:11px;" onclick="assignJob('${j.id}','${m}')">APPROVE</button>` : ''}
                     </div>`;
             }
             reqHtml += "</div>";
@@ -278,32 +264,50 @@
 
         list.innerHTML += `<div class="card" style="border-left-color:${statusColor}">
             <div class="badge" style="background:${statusColor}; color:white;">${j.status}</div>
-            <b>📍 Area: ${j.area}</b><br>
-            <b>⏰ Time: ${j.dt}</b><br>
-            ${j.desc ? `📝 <i>${j.desc}</i><br>` : ''}
-            <hr>
-            <b>Status:</b> [${j.status}]<br>
+            
+            <div onclick="editDuty('${j.id}', '${j.area}', '${j.dt}', '${j.desc || ""}')" style="cursor:pointer;">
+                <b>📍 Area: ${j.area} ✏️</b><br>
+                <b>⏰ Time: ${j.dt}</b><br>
+                ${j.desc ? `📝 <i>${j.desc}</i><br>` : ''}
+            </div>
+            
+            <hr style="margin:10px 0; border:0.2px solid #eee;">
             
             ${j.assignedTo ? `✅ Assigned to: ${allDrivers[j.assignedTo] ? allDrivers[j.assignedTo].name : j.assignedTo}<br>` : reqHtml}
+            ${j.status === 'Finished' ? `<b style="color:var(--success);">💰 Received: ₹${j.receivedAmount || 0}</b><br>` : ''}
             
-            ${j.status === 'Finished' ? `<b style="color:var(--success); font-size:1.1em;">💰 Received: ₹${j.receivedAmount || 0}</b><br>` : ''}
-            
-            <button class="btn btn-red" onclick="deleteJob('${j.id}')">DELETE DUTY 🗑️</button>
+            <div style="display:flex; gap:10px; margin-top:10px;">
+                <button class="btn btn-red" style="padding:8px;" onclick="deleteJob('${j.id}')">DELETE 🗑️</button>
+            </div>
         </div>`;
     }
 
-    // Pending Driver Signup Approvals
+    // Pending Driver Approval Section (Same as before)
     const dList = document.getElementById('pendingDrivers'); 
     dList.innerHTML = "";
     for(let m in allDrivers) {
         if(allDrivers[m].status === "Pending") {
-            dList.innerHTML += `
-                <div class="card">
-                    <b>${allDrivers[m].name}</b><br>
-                    Exp: ${allDrivers[m].licenseExp || 'N/A'}
-                    <button class="btn btn-blue" onclick="approveDriver('${m}')">APPROVE DRIVER</button>
-                </div>`;
+            dList.innerHTML += `<div class="card"><b>${allDrivers[m].name}</b><br>Exp: ${allDrivers[m].licenseExp}<button class="btn btn-blue" onclick="approveDriver('${m}')">APPROVE</button></div>`;
         }
+    }
+}
+
+    async function editDuty(id, oldArea, oldTime, oldDesc) {
+    const newArea = prompt("Edit Area:", oldArea);
+    const newTime = prompt("Edit Date & Time:", oldTime);
+    const newDesc = prompt("Edit Details:", oldDesc);
+
+    if (newArea && newTime) {
+        await fetch(`${dbUrl}/jobs/${id}.json`, { 
+            method:'PATCH', 
+            body:JSON.stringify({
+                area: newArea,
+                dt: newTime,
+                desc: newDesc
+            }) 
+        });
+        alert("Duty Updated Successfully! ✅");
+        loadAdminView(); // Refresh the list
     }
 }
 
@@ -329,7 +333,6 @@
     const section = document.getElementById('registeredDriversSection');
     const list = document.getElementById('allDriversList');
     
-    // Toggle Display
     if (section.style.display === "none") {
         section.style.display = "block";
         list.innerHTML = "Fetching drivers...";
@@ -344,38 +347,53 @@
                     const d = drivers[m];
                     const statusColor = d.status === "Approved" ? "var(--success)" : "var(--danger)";
                     
-                    // --- License Expiry Logic ---
-                    let expDate = d.licenseExp || 'N/A';
-                    let expStyle = "color: #555;"; // Default grey color
-                    
-                    if(d.licenseExp) {
-                        const today = new Date();
-                        const expiry = new Date(d.licenseExp);
-                        
-                        // Check if expired
-                        if(expiry < today) {
-                            expStyle = "color: var(--danger); font-weight: bold;"; // Red color
-                            expDate += " (EXPIRED! ⚠️)";
-                        }
-                    }
-
                     list.innerHTML += `
-                        <div class="card" style="border-left: 6px solid ${statusColor}; margin-bottom: 8px; padding: 10px;">
-                            <b>👤 Name:</b> ${d.name}<br>
-                            <b>📱 Mobile:</b> ${d.mobile}<br>
-                            <b>📅 License Exp:</b> <span style="${expStyle}">${expDate}</span><br>
-                            <b>📌 Status:</b> <span style="color:${statusColor}; font-weight:bold;">${d.status}</span>
+                        <div class="card" style="border-left: 6px solid ${statusColor}; margin-bottom: 12px; padding: 12px;">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                                <div onclick="editDriver('${m}', '${d.name}', '${d.licenseExp}')" style="cursor:pointer; flex: 1;">
+                                    <b>👤 Name:</b> ${d.name} ✏️<br>
+                                    <b>📱 Mobile:</b> ${d.mobile}<br>
+                                    <b>📅 License Exp:</b> ${d.licenseExp || 'N/A'}
+                                </div>
+                                <div style="display: flex; gap: 10px;">
+                                    <a href="tel:${d.mobile}" style="text-decoration: none;">
+                                        <div style="background: var(--success); color: white; padding: 8px; border-radius: 8px; width: 25px; height: 25px; display: flex; align-items: center; justify-content: center;">📞</div>
+                                    </a>
+                                    <div onclick="deleteDriver('${m}')" style="background: var(--danger); color: white; padding: 8px; border-radius: 8px; width: 25px; height: 25px; display: flex; align-items: center; justify-content: center; cursor:pointer;">🗑️</div>
+                                </div>
+                            </div>
                         </div>`;
                 }
             } else {
                 list.innerHTML = "No drivers found.";
             }
-        } catch (e) {
-            console.error(e);
-            list.innerHTML = "Error loading drivers.";
-        }
-    } else {
-        section.style.display = "none";
+        } catch (e) { list.innerHTML = "Error loading drivers."; }
+    } else { section.style.display = "none"; }
+}
+
+// --- NEW ACTIONS FOR ADMIN ---
+
+async function editDriver(mobile, oldName, oldExp) {
+    const newName = prompt("Edit Name:", oldName);
+    const newExp = prompt("Edit License Expiry (YYYY-MM-DD):", oldExp);
+    
+    if (newName && newExp) {
+        await fetch(`${dbUrl}/drivers/${mobile}.json`, { 
+            method:'PATCH', 
+            body:JSON.stringify({ name: newName, licenseExp: newExp }) 
+        });
+        alert("Driver Info Updated!");
+        toggleDriverList(); // Refresh
+        toggleDriverList(); // To reopen and see changes
+    }
+}
+
+async function deleteDriver(mobile) {
+    if(confirm("Intha driver-ah permanent-ah delete pannalaama? (Mariyadhaiya solli anuppunga!)")) {
+        await fetch(`${dbUrl}/drivers/${mobile}.json`, { method:'DELETE' });
+        alert("Driver Deleted!");
+        toggleDriverList();
+        toggleDriverList();
     }
 }
 
