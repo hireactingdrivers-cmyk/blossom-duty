@@ -15,25 +15,69 @@
     <!-- 2. Logo Configuration (Unga logo link-ah replace pannunga) -->
     <link rel="icon" type="image/png" href="https://your-link.com/logo.png"> 
     <link rel="apple-touch-icon" href="https://your-link.com/logo.png">
+<style>
+    :root { --primary: #004aad; --accent: #00c6ff; --success: #28a745; --danger: #dc3545; --bg: #f4f7f6; }
+    
+    body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding-bottom: 30px; }
+    .header { background: linear-gradient(135deg, var(--primary), var(--accent)); color: white; padding: 20px; text-align: center; font-weight: bold; font-size: 22px; border-radius: 0 0 20px 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    .page { display: none; padding: 15px; animation: fadeIn 0.3s ease-in; }
+    .active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    
+    .card { background: white; padding: 18px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.08); margin-bottom: 15px; border-left: 6px solid var(--primary); position: relative; }
+    input, textarea { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 10px; box-sizing: border-box; font-size: 15px; }
+    
+    .btn { width: 100%; padding: 14px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; transition: 0.2s; font-size: 15px; margin-top: 5px; }
+    .btn-blue { background: var(--primary); color: white; }
+    .btn-green { background: var(--success); color: white; }
+    .btn-red { background: var(--danger); color: white; margin-top: 10px; }
+    .btn-outline { border: 2px solid var(--primary); color: var(--primary); background: transparent; margin-top: 15px; }
+    
+    .section-title { font-size: 18px; color: var(--primary); margin: 20px 0 10px 5px; font-weight: bold; border-bottom: 2px solid var(--accent); display: inline-block; }
+    .badge { padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: bold; float: right; }
 
-    <style>
-        :root { --primary: #004aad; --accent: #00c6ff; --success: #28a745; --danger: #dc3545; --bg: #f4f7f6; }
-        /* ... baki CSS codes ... */
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding-bottom: 30px; }
-        .header { background: linear-gradient(135deg, var(--primary), var(--accent)); color: white; padding: 20px; text-align: center; font-weight: bold; font-size: 22px; border-radius: 0 0 20px 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-        .page { display: none; padding: 15px; animation: fadeIn 0.3s ease-in; }
-        .active { display: block; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .card { background: white; padding: 18px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.08); margin-bottom: 15px; border-left: 6px solid var(--primary); position: relative; }
-        input, textarea { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 10px; box-sizing: border-box; font-size: 15px; }
-        .btn { width: 100%; padding: 14px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; transition: 0.2s; font-size: 15px; margin-top: 5px; }
-        .btn-blue { background: var(--primary); color: white; }
-        .btn-green { background: var(--success); color: white; }
-        .btn-red { background: var(--danger); color: white; margin-top: 10px; }
-        .btn-outline { border: 2px solid var(--primary); color: var(--primary); background: transparent; margin-top: 15px; }
-        .section-title { font-size: 18px; color: var(--primary); margin: 20px 0 10px 5px; font-weight: bold; border-bottom: 2px solid var(--accent); display: inline-block; }
-        .badge { padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: bold; float: right; }
-    </style>
+    /* --- CHAT SECTION RE-FIXED FOR HIGH VISIBILITY --- */
+    .chat-window { 
+        height: 250px; 
+        overflow-y: auto; 
+        background: #f0f2f5; 
+        padding: 10px; 
+        border-radius: 10px; 
+        display: flex; 
+        flex-direction: column; 
+        gap: 8px; 
+        border: 1px solid #ddd; 
+    }
+
+    .msg { 
+        padding: 10px 14px; 
+        border-radius: 15px; 
+        max-width: 85%; 
+        font-size: 15px; 
+        font-weight: bold; 
+        display: block; 
+        clear: both; 
+        box-shadow: 0 1px 2px rgba(0,0,0,0.1); 
+    }
+
+    /* Admin: Yellow Background + Black Text (Fixed contrast) */
+    .msg.admin { 
+        background-color: #fff176 !important; 
+        color: #000000 !important; 
+        align-self: flex-start; 
+        border-bottom-left-radius: 2px; 
+        border: 1px solid #e0d050; 
+    }
+
+    /* Driver: Dark Blue Background + White Text */
+    .msg.driver { 
+        background-color: #004aad !important; 
+        color: #ffffff !important; 
+        align-self: flex-end; 
+        border-bottom-right-radius: 2px; 
+        border: none; 
+    }
+</style>
 </head>
 <body>
 
@@ -101,6 +145,9 @@
         <div class="section-title">🗂️ All Registered Drivers</div>
         <div id="allDriversList">Loading...</div>
     </div>
+    
+    <div class="section-title">💬 Driver Chats</div>
+<div id="adminChatList">Loading chats...</div>
 
     <button class="btn btn-outline" onclick="showPage('loginPage')">LOGOUT</button>
 </div>
@@ -128,6 +175,16 @@
             <div id="myHistory"></div>
         </div>
     </div>
+    
+    <div class="section-title">💬 Chat with Admin</div>
+<div class="card" style="border-left-color: #25d366;">
+    <div id="driverChatWindow" class="chat-window" style="height: 200px; overflow-y: auto; background: #f0f2f5; padding: 10px; border-radius: 10px; display: flex; flex-direction: column; gap: 5px;">
+        </div>
+    <div style="display: flex; gap: 5px; margin-top: 10px;">
+        <input type="text" id="d_chat_input" placeholder="Type message..." style="margin:0;">
+        <button class="btn btn-blue" style="width: 80px; margin:0;" onclick="sendDriverMsg()">SEND</button>
+    </div>
+</div>
 
     <div class="section-title">🚗 Open Duties</div>
     <div id="openDuties"></div>
@@ -138,13 +195,18 @@
 <script>
     const dbUrl = "https://blossomactingcalldrivers-77beb-default-rtdb.firebaseio.com";
     let curM = ""; let curN = ""; let lastCount = 0;
-
     function showPage(id) {
-        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-        document.getElementById(id).classList.add('active');
-        if(id === 'adminDash') loadAdminView();
-        if(id === 'driverDash') startMonitor();
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    
+    if(id === 'adminDash') {
+        loadAdminView();
+        loadAdminChats(); // <--- Idha inga add pannunga!
     }
+    if(id === 'driverDash') {
+        startMonitor();
+    }
+}
 
     // VOICE ALERT
     function speak(txt) {
@@ -154,11 +216,14 @@
 
     function startMonitor() {
     loadOpen(); 
-    loadMy(); // Dashboard open pannum podhey load aagum
+    loadMy(); 
+    loadDriverChat(); // <--- Step 1: Login panna udane chat history load aagum
+
     setInterval(() => { 
         if(document.getElementById('driverDash').classList.contains('active')) {
             loadOpen();
-            loadMy(); // Every 10 seconds check pannum
+            loadMy(); 
+            loadDriverChat(); // <--- Step 2: Every 10 seconds chat automatic-ah refresh aagum
         }
     }, 10000);
 }
@@ -292,6 +357,84 @@
     }
 }
 
+    // ADMIN SIDE: Load all chats
+    async function loadAdminChats() {
+    const res = await fetch(`${dbUrl}/chats.json`);
+    const allChats = await res.json();
+    
+    // DRIVERS LIST-AH FETCH PANROM (Name edukkadhukkaga)
+    const dRes = await fetch(`${dbUrl}/drivers.json`);
+    const drivers = await dRes.json();
+    
+    const list = document.getElementById('adminChatList');
+    list.innerHTML = "";
+
+    if(!allChats) { list.innerHTML = "No messages yet."; return; }
+
+    for(let mobile in allChats) {
+        // MOBILE NUMBER VACHI PERU (NAME) KANDUPUDIKKIRA LOGIC
+        let driverName = "Unknown Driver";
+        if(drivers && drivers[mobile]) {
+            driverName = drivers[mobile].name; // Driver per-ai edukkudhu
+        }
+
+        list.innerHTML += `
+            <div class="card" id="card_${mobile}" style="border-left: 6px solid #25d366; margin-bottom:15px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                    <div style="display:flex; flex-direction:column;">
+                        <b style="color:#004aad; font-size:16px;">👤 Name: ${driverName}</b>
+                        <span style="color:grey; font-size:12px;">📱 Mobile: ${mobile}</span>
+                    </div>
+                    <button onclick="clearChat('${mobile}')" style="background:#ffeded; color:#dc3545; border:none; padding:5px 10px; border-radius:5px; cursor:pointer; font-weight:bold;">CLEAR 🗑️</button>
+                </div>
+                <div class="chat-window" id="win_${mobile}" style="height:180px; background:#f0f2f5; overflow-y:auto; padding:10px; display:flex; flex-direction:column; gap:8px; border-radius:10px;"></div>
+                <div class="chat-input-grp" style="display:flex; gap:5px; margin-top:10px;">
+                    <input type="text" id="input_${mobile}" placeholder="Type reply to ${driverName}..." style="flex:1; padding:10px; border-radius:20px; border:1px solid #ccc;">
+                    <button class="btn btn-blue" style="width:70px; margin:0; border-radius:20px;" onclick="adminReply('${mobile}')">SEND</button>
+                </div>
+            </div>`;
+        
+        // Messages render panna namma pazhaya code-ye irukkatum...
+        const win = document.getElementById(`win_${mobile}`);
+        let chatHtml = "";
+        for(let id in allChats[mobile]) {
+    const m = allChats[mobile][id];
+    // SENDER AH PORUTHU CLASS ASSIGN PANROM
+    const typeClass = m.sender === 'admin' ? 'admin' : 'driver';
+    chatHtml += `<div class="msg ${typeClass}">${m.text}</div>`;
+}
+        win.innerHTML = chatHtml;
+        win.scrollTop = win.scrollHeight;
+    }
+}
+
+    async function adminReply(mobile) {
+    const inputField = document.getElementById(`input_${mobile}`);
+    const txt = inputField.value;
+    if(!txt) return;
+
+    await fetch(`${dbUrl}/chats/${mobile}.json`, {
+        method: 'POST',
+        body: JSON.stringify({ 
+            sender: 'admin', // Idhu 'admin' nu irundha dhaan blue color varum
+            text: txt, 
+            time: Date.now() 
+        })
+    });
+    
+    inputField.value = "";
+    loadAdminChats(); 
+}
+
+// Admin Dash-la irukkura interval-ah ippadi update pannunga
+setInterval(() => {
+    // Type pannittu irundha refresh pannaadha logic
+    const activeId = document.activeElement.id;
+    if(document.getElementById('adminDash').classList.contains('active') && !activeId.startsWith('input_')) {
+        loadAdminChats();
+    }
+}, 10000); // 10 seconds gap
+
     async function editDuty(id, oldArea, oldTime, oldDesc) {
     const newArea = prompt("Edit Area:", oldArea);
     const newTime = prompt("Edit Date & Time:", oldTime);
@@ -373,7 +516,7 @@
 
 // --- NEW ACTIONS FOR ADMIN ---
 
-async function editDriver(mobile, oldName, oldExp) {
+    async function editDriver(mobile, oldName, oldExp) {
     const newName = prompt("Edit Name:", oldName);
     const newExp = prompt("Edit License Expiry (YYYY-MM-DD):", oldExp);
     
@@ -388,7 +531,7 @@ async function editDriver(mobile, oldName, oldExp) {
     }
 }
 
-async function deleteDriver(mobile) {
+    async function deleteDriver(mobile) {
     if(confirm("Intha driver-ah permanent-ah delete pannalaama? (Mariyadhaiya solli anuppunga!)")) {
         await fetch(`${dbUrl}/drivers/${mobile}.json`, { method:'DELETE' });
         alert("Driver Deleted!");
@@ -458,7 +601,19 @@ async function deleteDriver(mobile) {
         await fetch(`${dbUrl}/drivers/${m}/status.json`, { method:'PUT', body:JSON.stringify("Approved") });
         loadAdminView();
     }
-
+    
+    async function clearChat(mobile) {
+    if(confirm(`Intha driver (${mobile}) oda chat history-ah delete pannalaama?`)) {
+        try {
+            await fetch(`${dbUrl}/chats/${mobile}.json`, { method: 'DELETE' });
+            alert("Chat Cleared! ✅");
+            loadAdminChats(); // Screen-ah refresh panna
+        } catch (e) {
+            alert("Error deleting chat.");
+        }
+    }
+}
+    
     // DRIVER FUNCTIONS
     async function loadOpen() {
         const res = await fetch(`${dbUrl}/jobs.json`);
@@ -692,6 +847,70 @@ async function deleteDriver(mobile) {
     alert("Signup Success! Admin approval-ku wait pannunga.");
     showPage('loginPage');
 }
+
+    async function sendDriverMsg() {
+    const txt = document.getElementById('d_chat_input').value;
+    if(!txt) return;
+
+    // Firebase-la save panrom
+    await fetch(`${dbUrl}/chats/${curM}.json`, {
+        method: 'POST',
+        body: JSON.stringify({ sender: 'driver', text: txt, time: Date.now() })
+    });
+
+    // UNGALUKKU TELEGRAM-LA ALERT ANUPPURAM
+    const botToken = "8385530049:AAEe6TtUyK7lcjlgz0vzr8u3on61MY3AABo";
+    const myId = "5052552560"; 
+    const telMsg = `💬 *CHAT FROM:* ${curN}\n📱 *No:* ${curM}\n\n"${txt}"\n\n👉 *App-la reply pannunga!*`;
+
+    fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chat_id: myId, text: telMsg, parse_mode: 'Markdown' })
+    });
+
+    document.getElementById('d_chat_input').value = "";
+    loadDriverChat(); 
+}
+
+    async function loadDriverChat() {
+    // 1. Login panna driver-oda mobile number irukkanu check pannudhu
+    if(!curM) return; 
+
+    // 2. IMPORTANT: Indha address-la 'curM' irundha dhaan unga chat private-ah irukkum
+    const res = await fetch(`${dbUrl}/chats/${curM}.json`);
+    const data = await res.json();
+    const win = document.getElementById('driverChatWindow');
+    let chatHtml = "";
+    if(data) {
+        for(let id in data) {
+    const m = data[id];
+    const typeClass = m.sender === 'admin' ? 'admin' : 'driver';
+    chatHtml += `<div class="msg ${typeClass}">${m.text}</div>`;
+}
+        
+        // Content refresh aagum podhu typing-ah disturb pannaama irukka
+        if(win.innerHTML !== chatHtml) {
+            win.innerHTML = chatHtml;
+            win.scrollTop = win.scrollHeight;
+        }
+    } else {
+        win.innerHTML = "<p style='text-align:center; color:grey; font-size:12px;'>No messages yet.</p>";
+    }
+}
+
+// 3. Every 5 seconds chat-ah refresh panna (Auto-update)
+setInterval(() => { 
+    if(document.getElementById('driverDash').classList.contains('active')) {
+        loadOpen();
+        loadMy(); 
+        
+        // Type pannittu irukkumbodhu cursor jump aagakoodadhu nu indha condition
+        if(document.activeElement.id !== 'd_chat_input') {
+            loadDriverChat(); 
+        }
+    }
+}, 10000); // 10 seconds gap is safe
 </script>
 </body>
 </html>
