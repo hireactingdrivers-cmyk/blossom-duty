@@ -98,15 +98,20 @@
 <div id="signupPage" class="page">
     <div class="card">
         <h2>Driver Signup</h2>
-        <input type="text" id="reg_n" placeholder="Full Name">
+        
+        <input type="text" id="reg_n" placeholder="Full Name" autocapitalize="words">
+        
         <input type="tel" id="reg_m" placeholder="Mobile Number">
         
         <label style="font-size: 13px; color: grey; margin-left: 5px;">License Expiry Date:</label>
         <input type="date" id="reg_exp"> 
         
-        <input type="text" id="reg_img" placeholder="Profile Photo Link">
-        <button class="btn btn-blue" onclick="signup()">SUBMIT</button>
-        <p onclick="showPage('loginPage')" style="text-align:center; cursor:pointer;">Back</p>
+        <label style="font-size: 13px; color: grey; margin-left: 5px; margin-top: 10px; display: block;">Upload Profile Photo:</label>
+        <input type="file" id="reg_file" accept="image/*" style="border: 1px dashed var(--primary); padding: 10px;">
+        
+        <button class="btn btn-blue" id="signupBtn" onclick="signup()">SUBMIT & UPLOAD</button>
+        
+        <p onclick="showPage('loginPage')" style="text-align:center; cursor:pointer; font-weight: bold; color: var(--primary);">Back to Login</p>
     </div>
 </div>
 
@@ -823,29 +828,64 @@ setInterval(() => {
     async function signup() {
     const n = document.getElementById('reg_n').value; 
     const m = document.getElementById('reg_m').value;
-    const exp = document.getElementById('reg_exp').value; // New Date
-    const img = document.getElementById('reg_img').value;
+    const exp = document.getElementById('reg_exp').value; 
+    const fileInput = document.getElementById('reg_file');
 
-    if(!n || !m || !exp) {
-        alert("Name, Mobile, and License Expiry Date fill pannunga!");
+    // 1. Check if all fields are filled
+    if(!n || !m || !exp || !fileInput.files[0]) {
+        alert("Pura details-um fill panni, photo-vum select pannunga boss!");
         return;
     }
 
-    const profilePic = (img && img.trim() !== "") ? img.trim() : "https://cdn-icons-png.flaticon.com/512/3135/3135715.png";
+    const file = fileInput.files[0];
+    const btn = document.getElementById('signupBtn');
 
-    await fetch(`${dbUrl}/drivers/${m}.json`, { 
-        method:'PUT', 
-        body:JSON.stringify({
-            name: n, 
-            mobile: m, 
-            licenseExp: exp, // Database-la save aagum
-            photo: profilePic,
-            status: "Pending"
-        }) 
-    });
+    try {
+        btn.disabled = true;
+        btn.innerText = "UPLOADING PHOTO... ⏳";
 
-    alert("Signup Success! Admin approval-ku wait pannunga.");
-    showPage('loginPage');
+        // 2. Cloudinary-ku Photo Anuppurom
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('upload_preset', 'blossom_preset'); // <--- Settings-la 'Unsigned' nu irukanum
+
+        const cloudRes = await fetch('https://api.cloudinary.com/v1_1/dklseiifq/image/upload', {
+            method: 'POST',
+            body: formData
+        });
+
+        const cloudData = await cloudRes.json();
+        
+        if(!cloudData.secure_url) {
+            alert("Photo upload failed! Preset name 'blossom_preset' check pannunga.");
+            btn.disabled = false;
+            btn.innerText = "SUBMIT & UPLOAD";
+            return;
+        }
+
+        const profilePicUrl = cloudData.secure_url; 
+
+        // 3. Firebase-la Save Panrom
+        await fetch(`${dbUrl}/drivers/${m}.json`, { 
+            method:'PUT', 
+            body:JSON.stringify({
+                name: n, 
+                mobile: m, 
+                licenseExp: exp, 
+                photo: profilePicUrl, 
+                status: "Pending"
+            }) 
+        });
+
+        alert("Signup Success! Admin-ku notification anuppiyaachu. ✅");
+        showPage('loginPage');
+
+    } catch (error) {
+        console.error("Error:", error);
+        alert("System error! Net check pannunga.");
+        btn.disabled = false;
+        btn.innerText = "SUBMIT & UPLOAD";
+    }
 }
 
     async function sendDriverMsg() {
