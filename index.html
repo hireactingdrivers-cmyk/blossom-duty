@@ -77,6 +77,42 @@
         border-bottom-right-radius: 2px; 
         border: none; 
     }
+    
+        /* New Circle Button Layout */
+    .menu-container {
+        display: flex;
+        justify-content: center;
+        gap: 20px;
+        margin-top: 40px;
+        flex-wrap: wrap;
+    }
+
+    .circle-btn {
+        width: 100px;
+        height: 100px;
+        border-radius: 50%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        font-size: 11px;
+        font-weight: bold;
+        text-align: center;
+        cursor: pointer;
+        box-shadow: 0 6px 15px rgba(0,0,0,0.15);
+        transition: 0.3s;
+        border: 3px solid white;
+        color: white;
+    }
+
+    .circle-btn:active { transform: scale(0.9); }
+    
+    /* Colors for the 3 Buttons */
+    .btn-admin { background: linear-gradient(135deg, #ffd700, #ffa500); color: #000; } /* King Gold */
+    .btn-login { background: linear-gradient(135deg, #004aad, #00c6ff); } /* Driver Blue */
+    .btn-signup { background: linear-gradient(135deg, #28a745, #1dcc45); } /* Signup Green */
+    
+    .icon-large { font-size: 30px; margin-bottom: 4px; }
 </style>
 </head>
 <body>
@@ -85,14 +121,37 @@
 
 <!-- LOGIN -->
 <div id="loginPage" class="page active">
-    <div class="card" style="text-align: center; border-left: none;">
-        <h2>Driver Login</h2>
-        <input type="tel" id="login_m" placeholder="Mobile Number">
-        <button class="btn btn-blue" onclick="login()">LOGIN</button>
-        <p onclick="showPage('signupPage')" style="color:var(--primary); cursor:pointer; font-weight:bold; margin-top:20px;">New Driver? Signup</p>
-        <button class="btn btn-outline" style="font-size:12px;" onclick="showPage('adminAuth')">ADMIN LOGIN</button>
+    <div style="text-align: center; padding-top: 20px;">
+        <h2 style="color: var(--primary); margin-bottom: 0;">Blossom Portal</h2>
+        <p style="color: grey; font-size: 14px;">Select an option to continue</p>
+        
+        <div class="menu-container">
+            <div class="circle-btn btn-admin" onclick="showPage('adminAuth')">
+                <span class="icon-large">👑</span>
+                <span>ADMIN<br>LOGIN</span>
+            </div>
+
+            <div class="circle-btn btn-login" onclick="document.getElementById('driver_input_area').style.display='block'">
+                <span class="icon-large">🚗</span>
+                <span>DRIVER<br>LOGIN</span>
+            </div>
+
+            <div class="circle-btn btn-signup" onclick="showPage('signupPage')">
+                <span class="icon-large">📝</span>
+                <span>DRIVER<br>SIGNUP</span>
+            </div>
+        </div>
+
+        <div id="driver_input_area" style="display:none; margin-top: 40px; padding: 0 15px;">
+            <div class="card" style="border-left: 6px solid var(--primary);">
+                <h4 style="margin-top:0;">Enter Mobile Number</h4>
+                <input type="tel" id="login_m" placeholder="Ex: 9876543210">
+                <button class="btn btn-blue" onclick="login()">ENTER DASHBOARD</button>
+                <button class="btn btn-outline" style="border:none; color:grey;" onclick="document.getElementById('driver_input_area').style.display='none'">Cancel</button>
+            </div>
+        </div>
     </div>
-</div>
+</div>>
 
 <!-- SIGNUP -->
 <div id="signupPage" class="page">
