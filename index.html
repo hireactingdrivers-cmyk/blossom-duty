@@ -319,6 +319,10 @@
 
     // --- DATE FORMATTING LOGIC ---
     let d = new Date(rawDt);
+    
+    // 1. புக்கிங் நேரத்தை மில்லிசெகண்டாக மாற்றுகிறோம் (Duration கணக்கிட இது முக்கியம்!)
+    const bookingTimeMs = d.getTime(); 
+
     let day = String(d.getDate()).padStart(2, '0');
     let month = String(d.getMonth() + 1).padStart(2, '0');
     let year = d.getFullYear();
@@ -332,15 +336,26 @@
     // ----------------------------
 
     const id = Date.now();
-    const job = { id, area, dt: finalDt, status: "Open" };
+    
+    // 2. 'bookingTimeMs' வரியை இங்கே சேர்த்துள்ளேன்
+    const job = { 
+        id, 
+        area, 
+        dt: finalDt, 
+        status: "Open", 
+        bookingTimeMs: bookingTimeMs 
+    };
 
-    // 1. Firebase Update
-    await fetch(`${dbUrl}/jobs/${id}.json`, { method:'PUT', body:JSON.stringify(job) });
+    // 3. Firebase Update
+    await fetch(`${dbUrl}/jobs/${id}.json`, { 
+        method:'PUT', 
+        body:JSON.stringify(job) 
+    });
 
-    // 2. Telegram Alert (அழகான பார்மட்டில்)
+    // 4. Telegram Alert
     const botToken = "8385530049:AAEe6TtUyK7lcjlgz0vzr8u3on61MY3AABo";
     const chatId = "-1003800327361";
-    const telegramMsg = `🌸 *BLOSSOM ACTING DRIVERS* 🌸\n\n📍 *Area:* ${area}\n⏰ *Time:* ${finalDt}\n\nடிரைவர் தேவை! ஆப்-ல் Request கொடுக்கவும்.`;
+    const telegramMsg = `🌸 *BLOSSOM ACTING DRIVERS* 🌸\n\n📍 *Area:* ${area}\n⏰ *Time:* ${finalDt}\n\nடிரைவர் தேவை! ஆப்-ல் Request கொடுக்கவும். 👍`;
 
     try {
         fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
@@ -813,22 +828,25 @@ setInterval(() => {
     if(!confirm("இந்த டியூட்டியை முடித்துவிடலாமா?")) return;
 
     try {
-        // 1. Firebase-ல் இருந்து அந்த டியூட்டி தகவலை எடுக்கிறோம்
         const res = await fetch(`${dbUrl}/jobs/${id}.json`);
         const job = await res.json();
 
-        // 2. ஒருவேளை நேரம் இல்லை என்றால் மாற்று ஏற்பாடு
-        const startTime = job.assignedAt || job.id; // assignedAt இல்லை என்றால் ID-யை (Created Time) எடுக்கும்
+        // புக்கிங் டைம் அல்லது அசைன் செய்யப்பட்ட டைம் - இதில் எது முதலில் இருக்கிறதோ அதை எடுக்கும்
+        const startTime = job.bookingTimeMs || job.assignedAt || job.id; 
         const endTime = Date.now();
+        
         const diffMs = endTime - startTime;
 
-        // 3. மணிநேரம் மற்றும் நிமிடமாக மாற்றுதல்
-        const diffHrs = Math.floor(diffMs / 3600000);
-        const diffMins = Math.floor((diffMs % 3600000) / 60000);
+        if (diffMs < 0) {
+            alert("Warning: டியூட்டி இன்னும் ஆரம்பிக்கவே இல்லை (Future Date)!");
+            // ஒருவேளை டியூட்டி ஆரம்பிக்க இன்னும் நேரம் இருந்தால் 0 என்று காட்டும்
+        }
+
+        const diffHrs = Math.floor(Math.abs(diffMs) / 3600000);
+        const diffMins = Math.floor((Math.abs(diffMs) % 3600000) / 60000);
 
         const totalDuration = `${diffHrs} Hrs ${diffMins} Mins`;
 
-        // 4. Firebase-ல் சேமித்தல் (Amount கிடையாது, Duration மட்டும் தான்)
         await fetch(`${dbUrl}/jobs/${id}.json`, { 
             method:'PATCH', 
             body:JSON.stringify({
@@ -839,9 +857,9 @@ setInterval(() => {
         });
         
         alert(`டியூட்டி முடிந்தது! ✅\nமொத்த நேரம்: ${totalDuration}`);
-        loadMy(); // லிஸ்ட்டை புதுப்பிக்க
+        loadMy();
     } catch (e) {
-        alert("Error finishing job. செக் பண்ணவும்!");
+        alert("Error! மீண்டும் முயற்சி செய்யவும்.");
     }
 }
 
