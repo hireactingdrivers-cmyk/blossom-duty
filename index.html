@@ -113,6 +113,16 @@
     .btn-signup { background: linear-gradient(135deg, #28a745, #1dcc45); } /* Signup Green */
     
     .icon-large { font-size: 30px; margin-bottom: 4px; }
+    
+    .driver-menu {
+    display: flex;
+    justify-content: space-around;
+    gap: 10px;
+    margin: 20px 0;
+}
+.btn-ongoing { background: linear-gradient(135deg, #28a745, #1dcc45); } /* Green */
+.btn-history { background: linear-gradient(135deg, #6c757d, #495057); } /* Grey */
+
 </style>
 </head>
 <body>
@@ -179,7 +189,11 @@
     <div class="card">
         <h3>Admin Password</h3>
         <input type="password" id="admin_p" placeholder="Password">
-        <button class="btn btn-blue" onclick="if(document.getElementById('admin_p').value=='divya') showPage('adminDash')">ENTER</button>
+        <button class="btn btn-blue" onclick="if(document.getElementById('admin_p').value=='divya') { showPage('adminDash'); } else { alert('Wrong Password!'); }">ENTER</button>
+        
+        <p onclick="showPage('loginPage')" style="text-align:center; cursor:pointer; font-weight: bold; color: var(--primary); margin-top: 20px;">
+            ⬅️ Back to Selection
+        </p>
     </div>
 </div>
 
@@ -187,7 +201,8 @@
     <div class="card">
         <h3>Post New Duty</h3>
         <input type="text" id="a_area" placeholder="Area (e.g., T.Nagar)">
-        <input type="text" id="a_dt" placeholder="Date & Time (e.g., 22 Mar, 10:00 AM)">
+        <label style="font-size: 13px; color: grey; margin-left: 5px;">Duty Date & Time:</label>
+        <input type="datetime-local" id="a_dt">
         <textarea id="a_desc" placeholder="Details (Optional)"></textarea>
         <button class="btn btn-blue" onclick="postDuty()">POST DUTY</button>
     </div>
@@ -219,36 +234,39 @@
 <!-- DRIVER DASHBOARD -->
 <div id="driverDash" class="page">
     <div class="card" style="background:var(--primary); color:white; border:none; text-align:center;">
-        <h3 id="driverName">Welcome</h3>
+        <div id="driverName">Welcome</div>
     </div>
 
-    <!-- ONGOING DUTIES BUTTON -->
-    <button class="btn btn-outline" onclick="toggleMyDuties()">📂 MY ONGOING DUTIES</button>
+    <div class="driver-menu">
+        <div class="circle-btn btn-ongoing" onclick="toggleMyDuties()" style="width: 110px; height: 110px;">
+            <span class="icon-large">📂</span>
+            <span>ONGOING<br>DUTIES</span>
+        </div>
+
+        <div class="circle-btn btn-history" onclick="toggleHistory()" style="width: 110px; height: 110px;">
+            <span class="icon-large">📜</span>
+            <span>VIEW<br>HISTORY</span>
+        </div>
+    </div>
 
     <div id="myDutiesSection" style="display:none; margin-top:15px;">
         <div class="section-title">✅ Confirmed / Ongoing</div>
         <div id="myDuties"></div>
-        
-        <hr style="border:0.5px solid #ddd; margin:20px 0;">
-        
-        <!-- NEW: HISTORY TOGGLE BUTTON -->
-        <button class="btn btn-outline" style="border-color:grey; color:grey; font-size:13px;" onclick="toggleHistory()">📜 VIEW COMPLETED HISTORY</button>
-        
-        <div id="historySection" style="display:none; margin-top:15px;">
-            <div class="section-title" style="color:grey; border-bottom-color:grey;">⌛ Completed History</div>
-            <div id="myHistory"></div>
-        </div>
     </div>
-    
+
+    <div id="historySection" style="display:none; margin-top:15px;">
+        <div class="section-title" style="color:grey; border-bottom-color:grey;">⌛ Completed History</div>
+        <div id="myHistory"></div>
+    </div>
+
     <div class="section-title">💬 Chat with Admin</div>
-<div class="card" style="border-left-color: #25d366;">
-    <div id="driverChatWindow" class="chat-window" style="height: 200px; overflow-y: auto; background: #f0f2f5; padding: 10px; border-radius: 10px; display: flex; flex-direction: column; gap: 5px;">
+    <div class="card" style="border-left-color: #25d366;">
+        <div id="driverChatWindow" class="chat-window"></div>
+        <div style="display: flex; gap: 5px; margin-top: 10px;">
+            <input type="text" id="d_chat_input" placeholder="Type message..." style="margin:0;">
+            <button class="btn btn-blue" style="width: 80px; margin:0;" onclick="sendDriverMsg()">SEND</button>
         </div>
-    <div style="display: flex; gap: 5px; margin-top: 10px;">
-        <input type="text" id="d_chat_input" placeholder="Type message..." style="margin:0;">
-        <button class="btn btn-blue" style="width: 80px; margin:0;" onclick="sendDriverMsg()">SEND</button>
     </div>
-</div>
 
     <div class="section-title">🚗 Open Duties</div>
     <div id="openDuties"></div>
@@ -295,69 +313,49 @@
     // ADMIN FUNCTIONS
     async function postDuty() {
     const area = document.getElementById('a_area').value;
-    const dt = document.getElementById('a_dt').value;
-    const desc = document.getElementById('a_desc').value;
+    const rawDt = document.getElementById('a_dt').value; // '2026-04-01T12:45'
 
-    if(!area || !dt) {
-        alert("Details fill pannunga boss!");
-        return;
-    }
+    if(!area || !rawDt) return alert("Area மற்றும் Date-ஐ நிரப்பவும்!");
+
+    // --- DATE FORMATTING LOGIC ---
+    let d = new Date(rawDt);
+    let day = String(d.getDate()).padStart(2, '0');
+    let month = String(d.getMonth() + 1).padStart(2, '0');
+    let year = d.getFullYear();
+    
+    let hrs = d.getHours();
+    let mins = String(d.getMinutes()).padStart(2, '0');
+    let ampm = hrs >= 12 ? 'PM' : 'AM';
+    hrs = hrs % 12;
+    hrs = hrs ? hrs : 12; 
+    let finalDt = `${day}.${month}.${year} / ${hrs}.${mins}${ampm}`;
+    // ----------------------------
 
     const id = Date.now();
-    
-    // 1. Firebase Logic
-    try {
-        await fetch(`${dbUrl}/jobs/${id}.json`, { 
-            method:'PUT', 
-            body:JSON.stringify({
-                id, 
-                area, 
-                dt, 
-                desc: desc, 
-                status:"Open"
-            }) 
-        });
-    } catch(e) {
-        console.error("Firebase Error:", e);
-    }
+    const job = { id, area, dt: finalDt, status: "Open" };
 
-    // 2. Telegram Logic
+    // 1. Firebase Update
+    await fetch(`${dbUrl}/jobs/${id}.json`, { method:'PUT', body:JSON.stringify(job) });
+
+    // 2. Telegram Alert (அழகான பார்மட்டில்)
     const botToken = "8385530049:AAEe6TtUyK7lcjlgz0vzr8u3on61MY3AABo";
-    const chatId = "-1003800327361"; // Unga numerical ID (with -100)
-
-    const message = `🌸 *BLOSSOM ACTING DRIVERS* 🌸\n\n` +
-                    `📍 *Area:* ${area}\n` +
-                    `⏰ *Time:* ${dt}\n` +
-                    `📝 *Note:* ${desc || 'N/A'}\n\n` +
-                    `✅ *App-la Request pannunga!*`;
+    const chatId = "-1003800327361";
+    const telegramMsg = `🌸 *BLOSSOM ACTING DRIVERS* 🌸\n\n📍 *Area:* ${area}\n⏰ *Time:* ${finalDt}\n\nடிரைவர் தேவை! ஆப்-ல் Request கொடுக்கவும்.`;
 
     try {
-        const res = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+        fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                chat_id: chatId,
-                text: message,
-                parse_mode: 'Markdown'
-            })
+            body: JSON.stringify({ chat_id: chatId, text: telegramMsg, parse_mode: 'Markdown' })
         });
-        
-        const data = await res.json();
-        if(data.ok) {
-            alert("Duty Posted to App & Telegram! 🚀");
-        } else {
-            alert("Telegram Error: " + data.description);
-        }
-    } catch (e) {
-        console.error("Telegram error:", e);
-        alert("Network error. Duty posted to Firebase only.");
-    }
+    } catch (e) { console.error(e); }
 
-    // Form clear
+    alert("Duty Posted Successfully! 🚀");
+    loadAdminView();
+    
+    // Form-ஐ கிளியர் செய்ய
     document.getElementById('a_area').value = "";
     document.getElementById('a_dt').value = "";
-    document.getElementById('a_desc').value = "";
-    loadAdminView();
 }
 
     async function loadAdminView() {
@@ -606,57 +604,46 @@ setInterval(() => {
 
     async function assignJob(id, m) {
     if(confirm("Intha driver-ku duty assign pannalaama?")) {
-        // 1. Details Fetching
         const dRes = await fetch(`${dbUrl}/drivers/${m}.json`);
         const dData = await dRes.json();
         const driverName = dData.name;
-        const driverMobile = m; 
 
         const jRes = await fetch(`${dbUrl}/jobs/${id}.json`);
         const jData = await jRes.json();
 
-        // 2. Firebase Update
+        // 1. Firebase Update
         await fetch(`${dbUrl}/jobs/${id}.json`, { 
             method:'PATCH', 
             body:JSON.stringify({
                 status: "Assigned", 
                 assignedTo: m,
+                assignedAt: Date.now(), 
                 requests: null 
             }) 
         });
 
-        // 3. Telegram Notification (Back-end logic)
+        // 2. Telegram Alert (With Admin Contact Link)
         const botToken = "8385530049:AAEe6TtUyK7lcjlgz0vzr8u3on61MY3AABo";
         const chatId = "-1003800327361";
-        const telegramMsg = `✅ *DUTY ARRANGED* ✅\n\n📍 *Area:* ${jData.area}\n⏰ *Time:* ${jData.dt}\n👨‍✈️ *Driver:* ${driverName}`;
+        const adminWALink = `https://wa.me/919500005402`;
+
+        const telegramMsg = `✅ *DUTY ARRANGED* ✅\n\n📍 *Area:* ${jData.area}\n⏰ *Time:* ${jData.dt}\n👨‍✈️ *Driver:* ${driverName}\n\n📲 *Contact Admin:* ${adminWALink}`;
 
         try {
             fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ chat_id: chatId, text: telegramMsg, parse_mode: 'Markdown' })
+                body: JSON.stringify({ 
+                    chat_id: chatId, 
+                    text: telegramMsg, 
+                    parse_mode: 'Markdown',
+                    disable_web_page_preview: true 
+                })
             });
         } catch (e) { console.error(e); }
 
-        // 4. WhatsApp Link Setup
-        const waMsg = encodeURIComponent(
-            `🌸 *BLOSSOM DRIVERS ALERT* 🌸\n\n` +
-            `✅ Duty Confirmed!\n` +
-            `📍 Area: ${jData.area}\n` +
-            `⏰ Time: ${jData.dt}\n\n` +
-            `payanam inidhe amaiya vaazhthukkal ! 👍`
-        );
-        const waLink = `https://wa.me/91${driverMobile}?text=${waMsg}`;
-
-        // 5. Success Message with Link (Popup Blocker-ah bypass panna idhu best!)
+        // 3. Success Alert & Refresh
         alert("Driver Assigned Successfully! 🚀");
-        
-        // Manual trigger for safety
-        const askWA = confirm("Driver-ku WhatsApp Alert anuppalaama?");
-        if(askWA) {
-            window.location.href = waLink; // Current window-leyae open aagum, so no block!
-        }
-
         loadAdminView();
     }
 }
@@ -796,60 +783,66 @@ setInterval(() => {
         for(let k in jobs) {
             const j = jobs[k];
             
-            // 1. Current Ongoing Duties
+            // ஓடிக்கொண்டிருக்கும் டியூட்டி
             if(j.status === "Assigned" && j.assignedTo === curM) {
                 currentList.innerHTML += `
-                <div class="card" style="border-left-color: var(--success);">
+                <div class="card" style="border-left-color: var(--success); background: #f0fff4;">
                     <div class="badge" style="background:var(--success); color:white;">ONGOING</div>
-                    <b>📍 Area: ${j.area}</b><br>
-                    <b>⏰ Time: ${j.dt}</b><br>
-                    <button class="btn btn-green" onclick="finishJob('${j.id}')">COMPLETE ✅</button>
+                    <b style="color:var(--primary);">📍 Area: ${j.area}</b><br>
+                    <small>⏰ Time: ${j.dt}</small><br>
+                    <button class="btn btn-green" style="margin-top:10px;" onclick="finishJob('${j.id}')">COMPLETE ✅</button>
                 </div>`;
             }
             
-            // 2. Completed History
+            // முடிந்த டியூட்டி ஹிஸ்டரி (Duration இங்கே காட்டும்)
             else if(j.status === "Finished" && j.assignedTo === curM) {
                 historyList.innerHTML += `
                 <div class="card" style="border-left-color: grey; opacity: 0.8;">
                     <div class="badge" style="background:grey; color:white;">FINISHED</div>
                     <b>📍 Area: ${j.area}</b><br>
-                    <b>⏰ Time: ${j.dt}</b><br>
-                    <small>💰 Amount: ₹${j.receivedAmount || 0}</small>
+                    <b style="color:#d32f2f;">⌛ Duration: ${j.duration || 'N/A'}</b><br> 
+                    <small>📅 Finished At: ${j.finishedAt || 'N/A'}</small>
                 </div>`;
             }
         }
     }
-    
-    if(currentList.innerHTML === "") currentList.innerHTML = "<p style='padding:10px; color:grey;'>No ongoing duties.</p>";
-    if(historyList.innerHTML === "") historyList.innerHTML = "<p style='padding:10px; color:grey;'>No history found.</p>";
+    if(currentList.innerHTML === "") currentList.innerHTML = "<p style='text-align:center; color:grey;'>No ongoing duties.</p>";
 }
 
     async function finishJob(id) {
-    const amount = prompt("Enter Received Amount (Ex: 500):");
-    
-                // Amount enter pannaama cancel panna stop aagidum
-    if (amount === null || amount === "") {
-        alert("Please enter the amount to complete the duty!");
-        return;
-    }
+    if(!confirm("இந்த டியூட்டியை முடித்துவிடலாமா?")) return;
 
-    // Number-ah check panrom
-    if (isNaN(amount)) {
-        alert("Please enter a valid number!");
-        return;
-    }
+    try {
+        // 1. Firebase-ல் இருந்து அந்த டியூட்டி தகவலை எடுக்கிறோம்
+        const res = await fetch(`${dbUrl}/jobs/${id}.json`);
+        const job = await res.json();
 
-    await fetch(`${dbUrl}/jobs/${id}.json`, { 
-        method:'PATCH', 
-        body:JSON.stringify({
-            status: "Finished",
-            receivedAmount: amount, // Inga amount store aagum
-            finishedAt: new Date().toLocaleString() // Time-um record aagum
-        }) 
-    });
-    
-    alert("Duty Finished! Amount Updated. ✅");
-    loadMy();
+        // 2. ஒருவேளை நேரம் இல்லை என்றால் மாற்று ஏற்பாடு
+        const startTime = job.assignedAt || job.id; // assignedAt இல்லை என்றால் ID-யை (Created Time) எடுக்கும்
+        const endTime = Date.now();
+        const diffMs = endTime - startTime;
+
+        // 3. மணிநேரம் மற்றும் நிமிடமாக மாற்றுதல்
+        const diffHrs = Math.floor(diffMs / 3600000);
+        const diffMins = Math.floor((diffMs % 3600000) / 60000);
+
+        const totalDuration = `${diffHrs} Hrs ${diffMins} Mins`;
+
+        // 4. Firebase-ல் சேமித்தல் (Amount கிடையாது, Duration மட்டும் தான்)
+        await fetch(`${dbUrl}/jobs/${id}.json`, { 
+            method:'PATCH', 
+            body:JSON.stringify({
+                status: "Finished",
+                duration: totalDuration, 
+                finishedAt: new Date().toLocaleString()
+            }) 
+        });
+        
+        alert(`டியூட்டி முடிந்தது! ✅\nமொத்த நேரம்: ${totalDuration}`);
+        loadMy(); // லிஸ்ட்டை புதுப்பிக்க
+    } catch (e) {
+        alert("Error finishing job. செக் பண்ணவும்!");
+    }
 }
 
         async function login() {
