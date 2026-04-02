@@ -350,16 +350,20 @@
             body:JSON.stringify(job) 
         });
 
-        // 2. Telegram Alert
-        const botToken = "8385530049:AAEe6TtUyK7lcjlgz0vzr8u3on61MY3AABo";
-        const chatId = "-1003800327361";
-        const appUrl = "https://hireactingdrivers-cmyk.github.io/blossom-duty/"; 
+            // Telegram Alert (With Correct Link)
+    const botToken = "8385530049:AAEe6TtUyK7lcjlgz0vzr8u3on61MY3AABo";
+    const chatId = "-1003800327361";
+    // உங்க கிட்-ஹப் லிங்க் இதுதானானு மட்டும் உறுதி செஞ்சுக்கோங்க பாஸ்
+    const appUrl = "https://hireactingdrivers-cmyk.github.io/blossom-duty/"; 
 
-        const telegramMsg = `🌸 *BLOSSOM ACTING DRIVERS* 🌸\n\n📍 *Area:* ${area}\n⏰ *Time:* ${finalDt}\n📝 *Details:* ${details || 'No extra info'}`;
+    const telegramMsg = `🌸 *BLOSSOM ACTING DRIVERS* 🌸\n\n📍 *Area:* ${area}\n⏰ *Time:* ${finalDt}\n📝 *Details:* ${details || 'No extra info'}`;
 
-        const inlineKeyboard = {
-            inline_keyboard: [[{ text: "📲 Request Duty (Open App)", url: appUrl }]]
-        };
+    const inlineKeyboard = {
+        inline_keyboard: [[{ 
+            text: "📲 Request Duty (Open App)", 
+            url: appUrl  // பட்டன் கிளிக் பண்ணா இந்த லிங்க் போகும்
+        }]]
+    };
 
         await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
             method: 'POST',
