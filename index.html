@@ -310,67 +310,80 @@
     }, 10000);
 }
 
-    // ADMIN FUNCTIONS
     async function postDuty() {
     const area = document.getElementById('a_area').value;
-    const rawDt = document.getElementById('a_dt').value; // '2026-04-01T12:45'
+    const rawDt = document.getElementById('a_dt').value;
+    
+    // HTML-ல 'a_desc'னு இருக்கிற ஐடியை இங்க சரியா எடுத்துக்கறோம்
+    const details = document.getElementById('a_desc').value; 
 
     if(!area || !rawDt) return alert("Area மற்றும் Date-ஐ நிரப்பவும்!");
 
-    // --- DATE FORMATTING LOGIC ---
+    // --- DATE FORMATTING ---
     let d = new Date(rawDt);
-    
-    // 1. புக்கிங் நேரத்தை மில்லிசெகண்டாக மாற்றுகிறோம் (Duration கணக்கிட இது முக்கியம்!)
     const bookingTimeMs = d.getTime(); 
-
     let day = String(d.getDate()).padStart(2, '0');
     let month = String(d.getMonth() + 1).padStart(2, '0');
     let year = d.getFullYear();
-    
     let hrs = d.getHours();
     let mins = String(d.getMinutes()).padStart(2, '0');
     let ampm = hrs >= 12 ? 'PM' : 'AM';
-    hrs = hrs % 12;
-    hrs = hrs ? hrs : 12; 
+    hrs = hrs % 12 || 12; 
     let finalDt = `${day}.${month}.${year} / ${hrs}.${mins}${ampm}`;
-    // ----------------------------
+    // ----------------------
 
     const id = Date.now();
-    
-    // 2. 'bookingTimeMs' வரியை இங்கே சேர்த்துள்ளேன்
+    // Firebase-ல 'details' காலியா இருந்தா 'No extra info'னு விழும்
     const job = { 
         id, 
         area, 
         dt: finalDt, 
+        desc: details || 'No extra info', 
         status: "Open", 
-        bookingTimeMs: bookingTimeMs 
+        bookingTimeMs 
     };
 
-    // 3. Firebase Update
-    await fetch(`${dbUrl}/jobs/${id}.json`, { 
-        method:'PUT', 
-        body:JSON.stringify(job) 
-    });
-
-    // 4. Telegram Alert
-    const botToken = "8385530049:AAEe6TtUyK7lcjlgz0vzr8u3on61MY3AABo";
-    const chatId = "-1003800327361";
-    const telegramMsg = `🌸 *BLOSSOM ACTING DRIVERS* 🌸\n\n📍 *Area:* ${area}\n⏰ *Time:* ${finalDt}\n\nடிரைவர் தேவை! ஆப்-ல் Request கொடுக்கவும். 👍`;
-
     try {
-        fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+        // 1. Firebase Update
+        await fetch(`${dbUrl}/jobs/${id}.json`, { 
+            method:'PUT', 
+            body:JSON.stringify(job) 
+        });
+
+        // 2. Telegram Alert
+        const botToken = "8385530049:AAEe6TtUyK7lcjlgz0vzr8u3on61MY3AABo";
+        const chatId = "-1003800327361";
+        const appUrl = "https://hireactingdrivers-cmyk.github.io/blossom-duty/"; 
+
+        const telegramMsg = `🌸 *BLOSSOM ACTING DRIVERS* 🌸\n\n📍 *Area:* ${area}\n⏰ *Time:* ${finalDt}\n📝 *Details:* ${details || 'No extra info'}`;
+
+        const inlineKeyboard = {
+            inline_keyboard: [[{ text: "📲 Request Duty (Open App)", url: appUrl }]]
+        };
+
+        await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ chat_id: chatId, text: telegramMsg, parse_mode: 'Markdown' })
+            body: JSON.stringify({ 
+                chat_id: chatId, 
+                text: telegramMsg, 
+                parse_mode: 'Markdown',
+                reply_markup: JSON.stringify(inlineKeyboard) 
+            })
         });
-    } catch (e) { console.error(e); }
 
-    alert("Duty Posted Successfully! 🚀");
-    loadAdminView();
-    
-    // Form-ஐ கிளியர் செய்ய
-    document.getElementById('a_area').value = "";
-    document.getElementById('a_dt').value = "";
+        alert("Duty Posted Successfully! 🚀");
+        loadAdminView();
+        
+        // Clear inputs after success
+        document.getElementById('a_area').value = "";
+        document.getElementById('a_dt').value = "";
+        document.getElementById('a_desc').value = ""; 
+
+    } catch (e) { 
+        console.error(e);
+        alert("Something went wrong. Check Internet!");
+    }
 }
 
     async function loadAdminView() {
@@ -664,9 +677,17 @@ setInterval(() => {
 }
 
     async function approveDriver(m) {
-        await fetch(`${dbUrl}/drivers/${m}/status.json`, { method:'PUT', body:JSON.stringify("Approved") });
-        loadAdminView();
-    }
+    if(!confirm("இந்த டிரைவரை அப்ரூவ் செய்து 'Verified' பேட்ஜ் வழங்கலாமா?")) return;
+
+    // 1. ஸ்டேட்டஸை 'Approved' என மாற்றுவது
+    await fetch(`${dbUrl}/drivers/${m}/status.json`, { method:'PUT', body:JSON.stringify("Approved") });
+
+    // 2. கூடவே 'isVerified' பேட்ஜையும் கொடுப்பது (இதைத்தான் புதுசா சேர்க்கிறோம்)
+    await fetch(`${dbUrl}/drivers/${m}/isVerified.json`, { method:'PUT', body:JSON.stringify(true) });
+
+    alert("டிரைவர் அப்ரூவ் செய்யப்பட்டு 'Verified' பேட்ஜ் வழங்கப்பட்டது! ✅🌟");
+    loadAdminView();
+}
     
     async function clearChat(mobile) {
     if(confirm(`Intha driver (${mobile}) oda chat history-ah delete pannalaama?`)) {
@@ -875,16 +896,24 @@ setInterval(() => {
         curM = m; 
         curN = data.name; 
         
-        // --- PROFILE PHOTO & NAME DISPLAY ---
-        // Inga data.photo field-la irukura link use aagum
+        // --- PROFILE PHOTO, NAME & VERIFIED BADGE ---
+        // 'isVerified' true-ஆ இருந்தா மட்டும் பச்சை கலர் பேட்ஜ் காட்டும்
+        const badge = data.isVerified ? 
+            `<span style="background:#28a745; color:white; padding:3px 10px; border-radius:15px; font-size:11px; font-weight:bold; margin-left:8px; display:inline-block; vertical-align:middle; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">✅ VERIFIED</span>` : 
+            '';
+
         document.getElementById('driverName').innerHTML = `
             <div style="margin-bottom: 15px;">
                 <img src="${data.photo || 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png'}" 
                      style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 3px solid white; box-shadow: 0 4px 8px rgba(0,0,0,0.2);">
             </div>
-            <span style="font-size: 18px; letter-spacing: 1px;">Welcome, ${curN}</span>
+            <div style="display: flex; align-items: center; justify-content: center; flex-wrap: wrap;">
+                <span style="font-size: 18px; font-weight: bold; letter-spacing: 1px;">Welcome, ${curN}</span>
+                ${badge}
+            </div>
         `; 
         
+        // டேஷ்போர்டுக்கு அழைத்துச் செல்ல (சாட் பட்டன் வரி நீக்கப்பட்டுள்ளது)
         showPage('driverDash'); 
     }
     else if(data && data.status === "Pending") {
@@ -935,7 +964,7 @@ setInterval(() => {
 
         const profilePicUrl = cloudData.secure_url; 
 
-        // 3. Firebase-la Save Panrom
+                // 3. Firebase-la Save Panrom
         await fetch(`${dbUrl}/drivers/${m}.json`, { 
             method:'PUT', 
             body:JSON.stringify({
