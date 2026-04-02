@@ -350,43 +350,40 @@
             body:JSON.stringify(job) 
         });
 
-            // Telegram Alert (With Correct Link)
-    const botToken = "8385530049:AAEe6TtUyK7lcjlgz0vzr8u3on61MY3AABo";
-    const chatId = "-1003800327361";
-    // உங்க கிட்-ஹப் லிங்க் இதுதானானு மட்டும் உறுதி செஞ்சுக்கோங்க பாஸ்
-    const appUrl = "https://hireactingdrivers-cmyk.github.io/blossom-duty/"; 
-
-    const telegramMsg = `🌸 *BLOSSOM ACTING DRIVERS* 🌸\n\n📍 *Area:* ${area}\n⏰ *Time:* ${finalDt}\n📝 *Details:* ${details || 'No extra info'}`;
-
-    const inlineKeyboard = {
-        inline_keyboard: [[{ 
-            text: "📲 Request Duty (Open App)", 
-            url: appUrl  // பட்டன் கிளிக் பண்ணா இந்த லிங்க் போகும்
-        }]]
-    };
-
-        await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                chat_id: chatId, 
-                text: telegramMsg, 
-                parse_mode: 'Markdown',
-                reply_markup: JSON.stringify(inlineKeyboard) 
-            })
-        });
-
-        alert("Duty Posted Successfully! 🚀");
-        loadAdminView();
+        // 2. Telegram Alert (Button-ஐ நீக்கியாச்சு)
+        const botToken = "8385530049:AAEe6TtUyK7lcjlgz0vzr8u3on61MY3AABo";
+        const chatId = "-1003800327361";
         
-        // Clear inputs after success
-        document.getElementById('a_area').value = "";
-        document.getElementById('a_dt').value = "";
-        document.getElementById('a_desc').value = ""; 
+        // மெசேஜ் மட்டும்
+        const telegramMsg = `🌸 *BLOSSOM ACTING DRIVERS* 🌸\n\n📍 *Area:* ${area}\n⏰ *Time:* ${finalDt}\n📝 *Details:* ${details || 'No extra info'}`;
 
-    } catch (e) { 
-        console.error(e);
-        alert("Something went wrong. Check Internet!");
+        try {
+            await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    chat_id: chatId, 
+                    text: telegramMsg, 
+                    parse_mode: 'Markdown'
+                    // reply_markup வரியை இங்கிருந்து தூக்கியாச்சு பாஸ்!
+                })
+            });
+
+            alert("Duty Posted Successfully! 🚀");
+            loadAdminView();
+            
+            // Input-களை கிளியர் பண்ண
+            document.getElementById('a_area').value = "";
+            document.getElementById('a_dt').value = "";
+            document.getElementById('a_desc').value = ""; 
+
+        } catch (e) { 
+            console.error(e);
+            alert("Telegram alert failed. But Duty posted in App!");
+        }
+    } catch (err) {
+        console.error(err);
+        alert("Something went wrong!");
     }
 }
 
